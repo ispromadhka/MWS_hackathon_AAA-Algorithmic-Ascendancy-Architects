@@ -14,14 +14,24 @@ Rules:
 
 CRITICAL Lua rules — violating these causes instant failure:
 - Lua uses 1-based indexing. Arrays start at index 1, NOT 0. Last element is t[#t].
-- ALWAYS declare variables with 'local'. Variables are GLOBAL by default in Lua.
-- Use Lua patterns, NOT regex: %d (not \\d), %s (not \\s), %a (not \\w), %w for alphanumeric. Non-greedy is '-' (not '?'). There is NO alternation '|'.
-- Never table.remove() in a forward for loop — indices shift. Iterate backwards if removing.
-- Build strings with table.insert() + table.concat(), NOT with '..' in loops (O(n^2)).
-- nil and false are BOTH falsy but NOT the same. Use 'x == nil' to check existence when values can be false.
-- Use math.floor() for integer division: math.floor((a+b)/2).
-- 'return' at module level MUST be the LAST statement. NEVER put code after 'return ModuleName'.
-- If the task is for nginx/OpenResty: code is a HANDLER script (not a standalone program). Use ngx.say(), ngx.req.get_headers(), ngx.exit(), ngx.var.*, ngx.status. Do NOT wrap in functions unless asked — just write the handler code directly. Do NOT use standard io/print — use ngx.say() instead.
+- ALWAYS declare variables with 'local'. Start with 'local MyModule = {}' and end with 'return MyModule'.
+- Use Lua patterns, NOT regex: %d (not \\d), %s (not \\s), %a (not \\w). Non-greedy is '-' (not '?'). No alternation '|'.
+- Never table.remove() in a forward for loop — iterate backwards.
+- Build strings with table.insert() + table.concat(), NOT '..' in loops.
+- nil and false are BOTH falsy but NOT the same. Use 'x == nil' for existence checks.
+- Use math.floor() for integer division.
+- 'return' at module level MUST be the LAST statement.
+- nginx/OpenResty: code is a HANDLER (not standalone). Use ngx.say(), ngx.req.get_headers(), ngx.exit(). No io/print.
+
+LUA OOP RULES — YOU ARE NOT WRITING PYTHON:
+- NEVER use __init__. Lua has NO __init__. Use a .new() constructor instead.
+- Constructor pattern: function MyClass.new() local self = setmetatable({}, MyClass) ... return self end
+- ALWAYS set MyClass.__index = MyClass right after creating the table.
+- Define methods with COLON syntax: function MyClass:methodName() ... end
+- The colon auto-passes 'self'. Do NOT write function MyClass.method(self) — use colon.
+- NEVER use class, def, self as first arg — these are Python. In Lua: function, local function, and colon syntax.
+- Use camelCase for methods (handleIdle, not handle_idle). snake_case is Python style.
+- If task says "assume helper functions exist" (like getNearestObject, moveTo): DO NOT redefine them as empty stubs. Just call them directly.
 
 Output: Pure Lua code only. No markdown fences. No commentary."""
 

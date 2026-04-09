@@ -37,8 +37,49 @@ class LuaSandbox:
         self.timeout = timeout
         self.lua_binary = lua_binary or _find_lua_binary()
 
+    def check_lua_antipatterns(self, code: str) -> SandboxResult | None:
+        """Проверяет код на Python-style anti-patterns в Lua."""
+        issues = []
+
+        # Detect __init__ (Python constructor pattern)
+        if "__init__" in code:
+            issues.append("ANTI-PATTERN: '__init__' is Python, not Lua. Use 'function MyClass.new()' with setmetatable instead.")
+
+        # Detect OOP without setmetatable
+        has_methods = "function " in code and ("." in code.split("function ")[1].split("(")[0] if "function " in code else False)
+        has_oop_indicators = ".__index" in code or ":new(" in code or ".new(" in code or "self." in code
+        if has_oop_indicators and "setmetatable" not in code:
+            issues.append("ANTI-PATTERN: OOP code detected but 'setmetatable' is missing. Add 'MyClass.__index = MyClass' and use 'setmetatable({}, MyClass)' in constructor.")
+
+        # Detect Python-style method definition (explicit self as first arg)
+        import re
+        python_methods = re.findall(r'function\s+\w+\.(\w+)\s*\(\s*self\b', code)
+        if python_methods:
+            issues.append(f"ANTI-PATTERN: Python-style method definition with explicit 'self' arg in: {', '.join(python_methods)}. Use colon syntax instead: 'function MyClass:methodName()'")
+
+        # Detect global module table (no 'local' before main table)
+        lines = code.strip().split("\n")
+        for line in lines[:5]:
+            stripped = line.strip()
+            if stripped and not stripped.startswith("--") and not stripped.startswith("local") and "= {}" in stripped:
+                issues.append(f"ANTI-PATTERN: Global variable '{stripped.split('=')[0].strip()}'. Use 'local' keyword: 'local {stripped}'")
+                break
+
+        if issues:
+            return SandboxResult(
+                status="lint_error",
+                output="Lua anti-pattern check failed:\n" + "\n".join(f"  - {i}" for i in issues),
+                exit_code=1,
+            )
+        return None
+
     def lint(self, code: str) -> SandboxResult | None:
-        """Запускает luacheck на коде. Возвращает SandboxResult с ошибками или None если ок."""
+        """Запускает luacheck + anti-pattern check."""
+        # First check anti-patterns (fast, no external tool)
+        ap = self.check_lua_antipatterns(code)
+        if ap:
+            return ap
+
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".lua", delete=False, encoding="utf-8"
         ) as f:
