@@ -18,19 +18,32 @@ Task → [RAG] → [Planner] → [Coder] → [Linter] → [Tester] → [Executor
 | **RAG** | Retrieves relevant code examples from FAISS knowledge base using semantic search |
 | **Planner** | Generates structured JSON architecture plan with function signatures and edge cases |
 | **Coder** | Writes Lua code following the plan and RAG patterns, with Lua-specific guardrails |
-| **Linter** | Static analysis via luacheck — catches syntax errors before sandbox execution |
-| **Tester** | Generates O(1) property-based and example-based tests |
+| **Linter** | Static analysis + anti-pattern detection (Python-on-Lua, missing setmetatable, global vars) |
+| **Tester** | Generates O(1) property-based and example-based tests with mocked APIs |
 | **Executor** | Runs code+tests in sandboxed Lua with instruction counting and memory limits |
-| **Critic** | Analyzes results, decides: SUCCESS / retry Coder (Fast Loop) / retry Planner (Slow Loop) |
+| **Critic** | Analyzes results with Reflexion, saves insights to Experience Bank |
 
 ### Key Features
 
 - **Dynamic Few-Shot RAG** — FAISS + all-MiniLM-L6-v2 retrieves the most relevant code pattern for each task
 - **Escalation Temperature** — 0.2 → 0.4 → 0.5 on retries to escape repeated errors
 - **O(1) Sandbox** — instruction counting (500K limit), memory tracking, restricted environment
+- **Anti-Pattern Detector** — catches `__init__`, `function X.method(self)`, missing `setmetatable`, global vars
+- **Context-Aware Mocking** — ngx mock only for nginx tasks; game tasks get raw Lua environment
 - **Experience Bank** — Reflexion-based learning from successes and failures across tasks
 - **Structured Planning** — JSON architecture plans with automatic fallback to free text
-- **30 Lua Patterns** — Pre-built knowledge base covering strings, tables, algorithms, OOP, HTTP, state machines, and more
+- **36 Lua Patterns** — Pre-built knowledge base covering strings, tables, algorithms, OOP, nginx, game agents, coroutines, and more
+- **Web UI** — Real-time SSE streaming with agent pipeline visualization
+
+## Web UI
+
+The system includes a built-in web interface served at `/`:
+
+- Input field with Cmd+Enter shortcut
+- Horizontal agent pipeline with live status indicators (green = done, amber = failed, pulsing = active)
+- Scrollable log with color-coded events
+- Syntax-highlighted Lua code editor with Copy button
+- Collapsible test results
 
 ## Quick Start
 
@@ -81,7 +94,7 @@ python3 main.py solve --task "Write a Lua function that reverses a string"
 # Interactive mode
 python3 main.py solve --interactive
 
-# Start HTTP API server
+# Start HTTP API server with Web UI
 python3 main.py server --port 8080
 
 # Batch evaluation
@@ -92,7 +105,9 @@ python3 main.py evaluate --eval-file data/eval_tasks.json
 
 | Method | Path | Description |
 |--------|------|-------------|
+| GET | `/` | Web UI |
 | POST | `/solve` | Solve a task. Body: `{"task": "..."}` |
+| POST | `/solve/stream` | SSE streaming — real-time agent events |
 | POST | `/rag/reload` | Reload knowledge base and rebuild index |
 | GET | `/health` | Health check with Lua/RAG status |
 
@@ -118,8 +133,10 @@ docker compose --profile eval run evaluate
 ## Project Structure
 
 ```
+├── ui/
+│   └── code.html              # Web UI (served at /)
 ├── data/
-│   ├── knowledge_base.json    # 30 Lua patterns with tests
+│   ├── knowledge_base.json    # 36 Lua patterns with tests
 │   ├── eval_tasks.json        # Evaluation dataset (10 tasks)
 │   ├── faiss_index.bin        # Generated FAISS index
 │   └── experience_bank.json   # Auto-generated insights from runs
@@ -128,14 +145,14 @@ docker compose --profile eval run evaluate
 ├── src/
 │   ├── llm_engine.py          # llama-cpp-python wrapper
 │   ├── rag_engine.py          # FAISS + SentenceTransformers
-│   ├── sandbox.py             # Lua execution sandbox with limits
+│   ├── sandbox.py             # Lua sandbox with limits + anti-pattern detector
 │   ├── graph.py               # LangGraph agent orchestration
 │   ├── experience_bank.py     # Reflexion-based experience storage
 │   └── agents/
-│       ├── planner.py         # Architecture planning agent
-│       ├── coder.py           # Code generation agent
-│       ├── tester.py          # Test generation agent
-│       └── critic.py          # Result analysis and routing agent
+│       ├── planner.py         # Architecture planning (JSON output)
+│       ├── coder.py           # Code generation with Lua guardrails
+│       ├── tester.py          # Test generation (O(1), property-based)
+│       └── critic.py          # Result analysis and routing
 ├── main.py                    # CLI/Server/Eval entry point
 ├── Dockerfile
 ├── docker-compose.yml
@@ -144,14 +161,17 @@ docker compose --profile eval run evaluate
 
 ## Knowledge Base
 
-The system ships with 30 pre-built Lua patterns covering:
+The system ships with 36 pre-built Lua patterns covering:
 
-- String manipulation (split, trim, reverse, interpolate, Caesar cipher, palindrome)
-- Table operations (map/filter/reduce, deep copy, sort, flatten, unique)
-- Data structures (stack, queue, linked list, LRU cache)
-- Algorithms (binary search, Levenshtein distance, matrix multiply, GCD/LCM, Fibonacci)
-- Patterns (JSON encoding, HTTP parsing, config parsing, rate limiting, state machines)
-- OOP (metatables, inheritance), coroutines, error handling, file operations, data validation
+- **String manipulation**: split, trim, reverse, interpolate, Caesar cipher, palindrome, word count
+- **Table operations**: map/filter/reduce, deep copy, sort, flatten, unique, merge
+- **Data structures**: stack, queue, linked list, LRU cache
+- **Algorithms**: binary search, Levenshtein distance, matrix multiply, GCD/LCM, Fibonacci
+- **OOP**: metatables, inheritance, proper constructor patterns with setmetatable
+- **State machines**: basic FSM, advanced FSM with callbacks, game agent FSM (IDLE/SEEKING/RETURNING)
+- **Coroutines**: producer-consumer, pipeline, task queue with timeouts and dt accumulation
+- **Nginx/OpenResty**: browser detection, access control, rate limiting, JSON API handlers
+- **Other**: JSON encoding, HTTP parsing, config parsing, error handling, file operations, data validation
 
 ### Adding Custom Patterns
 
@@ -161,8 +181,8 @@ Edit `data/knowledge_base.json`:
 {
   "task_type": "your_domain",
   "description": "What this pattern does",
-  "best_practice_code": "function example() ... end",
-  "prewritten_tests": "test_assert_eq(example(), expected, 'test name')"
+  "best_practice_code": "local MyModule = {}\n...\nreturn MyModule",
+  "prewritten_tests": "local obj = MyModule.new()\ntest_assert_eq(obj:method(), expected, 'test name')"
 }
 ```
 
@@ -191,7 +211,9 @@ The Lua sandbox enforces:
 - **Memory tracking**: Reports memory usage via `collectgarbage`
 - **Timeout**: Configurable process-level timeout (default 3s)
 - **Restricted environment**: `os.execute`, `io.popen`, `loadfile`, `dofile` are disabled
-- **Static analysis**: Optional luacheck pre-execution catches errors before running
+- **Anti-pattern detector**: Catches Python-on-Lua patterns (`__init__`, explicit `self` arg, missing `setmetatable`, global vars)
+- **Context-aware mocking**: ngx mock injected only for nginx/OpenResty tasks
+- **Auto-cleanup**: Strips `require()` from tests, removes trailing `return` before test injection
 
 ## Benchmarks
 
@@ -201,6 +223,7 @@ The Lua sandbox enforces:
 | Levenshtein distance | Pass@1 | 7.0s | 1.2 KB |
 | Caesar cipher | Pass@2 | 10.6s | 1.3 KB |
 | Matrix multiplication | Pass@3 | 16.8s | 3.9 KB |
+| Nginx browser detection | Pass (slow loop) | 30.5s | 2.7 KB |
 
 All tests execute in O(1) time and memory.
 
