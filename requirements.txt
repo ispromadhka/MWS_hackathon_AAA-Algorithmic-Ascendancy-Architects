@@ -1,0 +1,9 @@
+llama-cpp-python
+langgraph
+langchain-core
+faiss-cpu
+sentence-transformers
+lupa
+uvicorn
+fastapi
+pydantic

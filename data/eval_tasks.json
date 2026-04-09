@@ -1,0 +1,12 @@
+[
+  "Write a Lua function that reverses a string character by character. Handle empty strings and single characters.",
+  "Write a Lua function `count_words(s)` that counts the number of words in a string separated by spaces.",
+  "Write a Lua function `is_palindrome(s)` that checks if a string is a palindrome (ignoring case and spaces).",
+  "Write a Lua function `caesar_cipher(text, shift)` that encrypts text using Caesar cipher. Handle uppercase and lowercase letters, leave non-letters unchanged.",
+  "Write a Lua function `matrix_multiply(A, B)` that multiplies two 2D matrices represented as tables of tables.",
+  "Write a Lua function `binary_search(arr, target)` that performs binary search on a sorted array and returns the index or nil.",
+  "Write a Lua module that implements a simple linked list with methods: append, prepend, find, remove, to_table.",
+  "Write a Lua function `debounce(fn, delay)` using coroutines that ensures a function is only called once within a given time window.",
+  "Write a Lua function `flatten_object(tbl, prefix)` that flattens a nested table into a flat table with dot-separated keys. E.g., {a={b=1}} becomes {['a.b']=1}.",
+  "Write a Lua function `levenshtein(s1, s2)` that computes the edit distance between two strings."
+]

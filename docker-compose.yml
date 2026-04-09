@@ -1,0 +1,88 @@
+services:
+  # HTTP API server (default)
+  local-script:
+    build: .
+    container_name: local-script
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - CUDA_VISIBLE_DEVICES=0
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./models:/app/models:ro
+      - ./data:/app/data
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    command: ["server", "--port", "8080", "--lua-binary", "lua5.4"]
+
+  # Scale: multiple workers behind a load balancer
+  worker:
+    build: .
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - ./models:/app/models:ro
+      - ./data:/app/data
+    deploy:
+      replicas: 1
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles:
+      - scale
+    command: ["server", "--port", "8080", "--lua-binary", "lua5.4"]
+
+  # CLI interactive mode
+  solve:
+    build: .
+    container_name: local-script-solve
+    stdin_open: true
+    tty: true
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - CUDA_VISIBLE_DEVICES=0
+    volumes:
+      - ./models:/app/models:ro
+      - ./data:/app/data
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles:
+      - cli
+    entrypoint: ["python3", "main.py", "solve"]
+    command: ["--interactive"]
+
+  # Batch evaluation
+  evaluate:
+    build: .
+    container_name: local-script-eval
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - CUDA_VISIBLE_DEVICES=0
+    volumes:
+      - ./models:/app/models:ro
+      - ./data:/app/data
+      - ./results:/app/results
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles:
+      - eval
+    command: ["evaluate", "--eval-file", "data/eval_tasks.json", "--eval-output", "results/eval_results.json", "--lua-binary", "lua5.4"]
