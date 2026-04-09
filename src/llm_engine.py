@@ -5,7 +5,11 @@ from pathlib import Path
 from llama_cpp import Llama
 
 
-DEFAULT_MODEL_PATH = Path(__file__).resolve().parent.parent / "models" / "qwen2.5-coder-7b-instruct-q4_k_m.gguf"
+# Prefer Q5_K_M (better Lua quality, +10% on low-resource languages) with Q4_K_M fallback
+_model_dir = Path(__file__).resolve().parent.parent / "models"
+_q5 = _model_dir / "qwen2.5-coder-7b-instruct-q5_k_m.gguf"
+_q4 = _model_dir / "qwen2.5-coder-7b-instruct-q4_k_m.gguf"
+DEFAULT_MODEL_PATH = _q5 if _q5.exists() else _q4
 
 
 class LLMEngine:

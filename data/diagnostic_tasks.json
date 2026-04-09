@@ -1,0 +1,12 @@
+[
+  "Write a Lua function that reverses a string character by character. Handle empty strings.",
+  "Write a Lua function binary_search(arr, target) that returns the index or nil.",
+  "Write a Lua module with an LRU cache class using metatables. Methods: new(capacity), get(key), put(key, value).",
+  "Write a Lua coroutine-based task scheduler that executes tasks from a queue. Each task has a timeout in seconds. Use dt accumulation (no ngx, no sleep). The scheduler should kill timed-out tasks.",
+  "Write a Lua finite state machine for a game NPC with states IDLE, PATROL, CHASE. Use metatables for OOP. Assume helper functions: getNearestEnemy(), moveTo(pos), isPositionReached(), getRandomPatrolPoint().",
+  "Write a Lua function that parses a simple key=value config string (separated by newlines) and returns a table. Handle comments starting with #.",
+  "Write a Lua module for a token bucket rate limiter. Methods: new(maxTokens, refillRate), allow(cost), remaining().",
+  "Write a Lua function levenshtein(s1, s2) that computes edit distance between two strings.",
+  "Write a Lua content_by_lua handler for nginx that returns JSON with the current timestamp and request method. Use ngx.say and cjson.",
+  "Write a Lua function flatten(tbl) that flattens a nested table into a flat table with dot-separated keys. E.g. {a={b=1}} becomes {['a.b']=1}."
+]
