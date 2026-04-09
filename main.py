@@ -49,14 +49,25 @@ def run_cli(args):
 
 
 def run_server(args):
-    """FastAPI HTTP сервер."""
+    """FastAPI HTTP сервер с UI."""
     import uvicorn
+    import queue
+    import threading
+    from pathlib import Path
+    from contextlib import redirect_stdout
+    from io import StringIO
     from fastapi import FastAPI
+    from fastapi.staticfiles import StaticFiles
+    from fastapi.responses import HTMLResponse, StreamingResponse
     from pydantic import BaseModel
 
     app = FastAPI(title="LocalScript Agent")
 
-    # Глобальные компоненты
+    # Serve UI static files
+    ui_dir = Path(__file__).parent / "ui"
+    if ui_dir.exists():
+        app.mount("/ui", StaticFiles(directory=str(ui_dir), html=True), name="ui")
+
     llm = LLMEngine(
         model_path=args.model_path,
         n_ctx=args.ctx_size,
@@ -76,6 +87,13 @@ def run_server(args):
         tts: float
         iterations: int
 
+    @app.get("/", response_class=HTMLResponse)
+    def index():
+        html_path = ui_dir / "code.html"
+        if html_path.exists():
+            return html_path.read_text(encoding="utf-8")
+        return "<h1>UI not found. Place code.html in ui/ directory.</h1>"
+
     @app.post("/solve", response_model=TaskResponse)
     def solve(req: TaskRequest):
         result = run_task(req.task, llm, rag, sandbox, exp_bank)
@@ -88,6 +106,78 @@ def run_server(args):
             tests=result.get("tests_code", ""),
             tts=tts,
             iterations=result.get("iterations", 0),
+        )
+
+    @app.post("/solve/stream")
+    def solve_stream(req: TaskRequest):
+        """SSE endpoint — streams agent events in real-time."""
+        event_queue = queue.Queue()
+
+        def _capture_and_run():
+            """Runs the graph, captures print output as SSE events."""
+            import builtins
+            original_print = builtins.print
+
+            def hooked_print(*a, **kw):
+                msg = " ".join(str(x) for x in a)
+                # Parse agent events from print output
+                if "[RAG]" in msg:
+                    event_queue.put({"agent": "rag", "message": msg.strip()})
+                elif "[PLANNER]" in msg:
+                    event_queue.put({"agent": "planner", "message": msg.strip()})
+                elif "[CODER]" in msg:
+                    event_queue.put({"agent": "coder", "message": msg.strip()})
+                elif "[LINTER]" in msg:
+                    event_queue.put({"agent": "linter", "message": msg.strip()})
+                elif "[TESTER]" in msg:
+                    event_queue.put({"agent": "tester", "message": msg.strip()})
+                elif "[EXECUTOR]" in msg:
+                    event_queue.put({"agent": "executor", "message": msg.strip()})
+                elif "[CRITIC]" in msg:
+                    event_queue.put({"agent": "critic", "message": msg.strip()})
+                elif "[PASS]" in msg or "[FAIL]" in msg:
+                    event_queue.put({"agent": "test_result", "message": msg.strip()})
+                elif "RESULT:" in msg:
+                    event_queue.put({"agent": "result", "message": msg.strip()})
+                elif "TTS:" in msg:
+                    event_queue.put({"agent": "tts", "message": msg.strip()})
+                elif msg.strip():
+                    event_queue.put({"agent": "system", "message": msg.strip()})
+                original_print(*a, **kw)
+
+            builtins.print = hooked_print
+            try:
+                result = run_task(req.task, llm, rag, sandbox, exp_bank)
+                tts = result.get("time_finished", 0) - result.get("time_started", 0)
+                if tts <= 0:
+                    tts = time.time() - result.get("time_started", time.time())
+                event_queue.put({
+                    "agent": "done",
+                    "status": result["status"],
+                    "code": result.get("draft_code", ""),
+                    "tests": result.get("tests_code", ""),
+                    "tts": round(tts, 1),
+                    "iterations": result.get("iterations", 0),
+                })
+            except Exception as e:
+                event_queue.put({"agent": "error", "message": str(e)})
+            finally:
+                builtins.print = original_print
+                event_queue.put(None)  # sentinel
+
+        def _event_generator():
+            thread = threading.Thread(target=_capture_and_run, daemon=True)
+            thread.start()
+            while True:
+                event = event_queue.get()
+                if event is None:
+                    break
+                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+
+        return StreamingResponse(
+            _event_generator(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
 
     @app.post("/rag/reload")
