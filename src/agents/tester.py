@@ -34,6 +34,11 @@ NGINX/OPENRESTY TESTING RULES (when code uses ngx.*):
 - If the code is a straight handler (no functions), wrap the code call in a function in your test or simply check ngx state after the code runs.
 - Do NOT test for 'ngx is nil' — the mock is always available.
 
+SANDBOX RULES — the code and tests run in ONE file:
+- NEVER use require(). The user's code is already loaded in the same script. Just call functions/tables directly.
+- NEVER use dofile() or loadfile(). Everything is in one chunk.
+- The user code is defined ABOVE your tests. Just use the classes/functions directly: local obj = MyClass.new()
+
 O(1) TESTING RULES — all tests MUST be constant time and memory:
 - All test inputs must have CONSTANT SIZE: lists <= 5 elements, strings <= 20 chars
 - No loops in test assertions

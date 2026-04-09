@@ -313,9 +313,14 @@ end
 
         parts.append("-- User code\n" + user_code)
 
-        # Тесты
+        # Тесты — strip require() lines that break single-file sandbox
         if tests.strip():
-            parts.append("-- Tests\n" + tests)
+            cleaned_tests = "\n".join(
+                line for line in tests.split("\n")
+                if not line.strip().startswith("local ") or "require" not in line
+                if "require(" not in line and "require (" not in line
+            )
+            parts.append("-- Tests\n" + cleaned_tests)
             parts.append("\ntest_summary()")
 
         return "\n\n".join(parts)
