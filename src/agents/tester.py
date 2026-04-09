@@ -15,6 +15,11 @@ CRITICAL RULES:
 8. NEVER test implementation details — only test the contract (input → output)
 9. Keep tests SIMPLE. If a test requires complex setup, it's testing too much.
 10. On retry: if previous tests PASSED on some cases but FAILED on others, keep the passing tests and only fix/remove the failing ones. Do NOT add harder tests on retry.
+11. NEVER write trivial tests like test_assert(true, '...'). Every test MUST actually call a function and verify a result.
+12. For OOP/class code: create an instance with .new(), call methods, verify state changes.
+    Example: local obj = MyClass.new(); obj:doSomething(); test_assert_eq(obj:getState(), expected, 'test name')
+13. For FSM code: test state transitions. Create instance, trigger transition, verify new state.
+14. If helper functions are assumed to exist (e.g. moveTo, getNearestObject): create simple mocks that return predictable values, then test the logic that USES them.
 
 NGINX/OPENRESTY TESTING RULES (when code uses ngx.*):
 - A mock 'ngx' object is injected automatically. It records output from ngx.say().

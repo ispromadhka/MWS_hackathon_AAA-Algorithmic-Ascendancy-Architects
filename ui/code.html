@@ -223,7 +223,10 @@ tailwind.config = {
 
   function completeAgent(name) {
     const el = document.querySelector(`.agent-step[data-agent="${name}"] div`);
-    if (el) el.className = 'w-9 h-9 rounded-lg bg-accent2/20 border border-accent2 flex items-center justify-center text-accent2 text-xs font-bold';
+    if (el) {
+      el.className = 'w-9 h-9 rounded-lg bg-accent2/20 border border-accent2 flex items-center justify-center text-accent2 text-xs font-bold';
+      el.dataset.visited = '1';
+    }
   }
 
   function addLog(msg, type) {
@@ -259,6 +262,7 @@ tailwind.config = {
     // Reset all agent steps
     document.querySelectorAll('.agent-step div').forEach(el => {
       el.className = 'w-9 h-9 rounded-lg bg-slate-800 border border-border flex items-center justify-center text-dim text-xs font-bold';
+      delete el.dataset.visited;
     });
 
     try {
@@ -311,15 +315,15 @@ tailwind.config = {
 
               // Mark pipeline final state
               document.querySelectorAll('.agent-step div').forEach(el => {
-                const wasVisited = el.classList.contains('bg-accent2/20') || el.classList.contains('bg-accent/20');
+                const wasVisited = el.dataset.visited === '1';
                 if (ok) {
-                  if (wasVisited || el.closest('.agent-step')) {
+                  if (wasVisited) {
                     el.className = 'w-9 h-9 rounded-lg bg-accent2/20 border border-accent2 flex items-center justify-center text-accent2 text-xs font-bold';
                   }
                 } else {
-                  // GIVE_UP / error: turn visited agents RED
+                  // GIVE_UP / error: turn visited agents AMBER
                   if (wasVisited) {
-                    el.className = 'w-9 h-9 rounded-lg bg-err/20 border border-err flex items-center justify-center text-err text-xs font-bold';
+                    el.className = 'w-9 h-9 rounded-lg bg-amber-500/20 border border-amber-500 flex items-center justify-center text-amber-400 text-xs font-bold';
                   }
                 }
               });

@@ -15,11 +15,13 @@ Output ONLY valid JSON in this exact format (no markdown, no commentary):
 }
 
 Rules:
-1. Keep it SHORT — 1-3 functions max for simple tasks
-2. The algorithm field should be 1-2 sentences
+1. For SIMPLE tasks (one function): 1-3 functions, algorithm is 1-2 sentences
+2. For COMPLEX tasks (classes, FSM, agents, modules): list ALL methods with args and returns. Include constructor (new/init), core methods, and helper methods.
 3. Edge cases: ONLY those explicitly required by the task
 4. lua_warnings: Lua-specific pitfalls relevant to THIS task
-5. If the task is simple (one function), use exactly 1 function entry
+5. For OOP tasks: ALWAYS specify "use setmetatable for OOP", "use self: method syntax", "each instance must have its own state"
+6. For FSM/state machine tasks: specify state enum, transitions table, per-state handler pattern
+7. If the task mentions helper functions that exist (e.g. "assume getNearestObject exists"): list them as external deps, do NOT redefine them as empty stubs
 """
 
 PLANNER_FALLBACK_PROMPT = """You are an expert Lua software architect. Produce a concise plan.
