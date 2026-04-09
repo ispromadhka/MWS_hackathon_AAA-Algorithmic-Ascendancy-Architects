@@ -38,6 +38,8 @@ SANDBOX RULES — the code and tests run in ONE file:
 - NEVER use require(). The user's code is already loaded in the same script. Just call functions/tables directly.
 - NEVER use dofile() or loadfile(). Everything is in one chunk.
 - The user code is defined ABOVE your tests. Just use the classes/functions directly: local obj = MyClass.new()
+- NEVER compare tables with == in test_assert_eq. In Lua, two tables are NEVER equal even with same content (different references). Instead test properties: test_assert(type(obj) == 'table', 'is table'), test_assert_eq(obj.field, value, 'field check')
+- NEVER use Vector3 — it does not exist in standalone Lua. Use plain tables: {x=1, y=0, z=1}
 
 O(1) TESTING RULES — all tests MUST be constant time and memory:
 - All test inputs must have CONSTANT SIZE: lists <= 5 elements, strings <= 20 chars

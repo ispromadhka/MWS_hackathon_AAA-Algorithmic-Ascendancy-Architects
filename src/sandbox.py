@@ -57,13 +57,20 @@ class LuaSandbox:
         if python_methods:
             issues.append(f"ANTI-PATTERN: Python-style method definition with explicit 'self' arg in: {', '.join(python_methods)}. Use colon syntax instead: 'function MyClass:methodName()'")
 
-        # Detect global module table (no 'local' before main table)
+        # Detect global module table — only top-level lines starting at column 0
         lines = code.strip().split("\n")
         for line in lines[:5]:
             stripped = line.strip()
-            if stripped and not stripped.startswith("--") and not stripped.startswith("local") and "= {}" in stripped:
-                issues.append(f"ANTI-PATTERN: Global variable '{stripped.split('=')[0].strip()}'. Use 'local' keyword: 'local {stripped}'")
-                break
+            # Only flag if line starts at indent 0 AND has simple assignment pattern
+            if (stripped and not stripped.startswith("--") and not stripped.startswith("local")
+                    and "= {}" in stripped and line == stripped  # no leading whitespace = top level
+                    and not stripped.startswith("function") and not stripped.startswith("self.")
+                    and not stripped.startswith("}")):
+                varname = stripped.split("=")[0].strip()
+                # Only flag single identifiers (not self.x or t.field)
+                if varname.isidentifier():
+                    issues.append(f"ANTI-PATTERN: Global variable '{varname}'. Use 'local' keyword: 'local {stripped}'")
+                    break
 
         if issues:
             return SandboxResult(
