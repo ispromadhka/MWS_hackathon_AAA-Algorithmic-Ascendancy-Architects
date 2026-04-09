@@ -19,8 +19,13 @@ Rules:
 2. For COMPLEX tasks (classes, FSM, agents, modules): list ALL methods with args and returns. Include constructor (new/init), core methods, and helper methods.
 3. Edge cases: ONLY those explicitly required by the task
 4. lua_warnings: Lua-specific pitfalls relevant to THIS task
-5. For OOP tasks: ALWAYS specify "use setmetatable for OOP", "use self: method syntax", "each instance must have its own state"
-6. For FSM/state machine tasks: specify state enum, transitions table, per-state handler pattern
+5. For OOP tasks: ALWAYS specify "use setmetatable for OOP", "use self: method syntax", "init ALL fields in new() not on class table"
+6. For FSM/state machine tasks:
+   - State constants in a separate local table: local STATE = {IDLE=1, SEEKING=2, ...}
+   - ALL instance fields (state, target, etc.) initialized inside new(), NEVER as class-level fields
+   - EVERY action state that involves movement MUST check isPositionReached() before transitioning
+   - Pattern: moveTo() starts movement on tick N, isPositionReached() returns true on tick N+1, THEN transition
+   - If target disappears, fall back to IDLE
 7. If the task mentions helper functions that exist (e.g. "assume getNearestObject exists"): list them as external deps, do NOT redefine them as empty stubs
 """
 
