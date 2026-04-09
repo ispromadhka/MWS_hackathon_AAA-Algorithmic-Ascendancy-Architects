@@ -25,6 +25,7 @@ class AgentState(TypedDict):
     iterations: int         # счётчик Fast Loop
     slow_iterations: int    # счётчик Slow Loop
     status: str             # SUCCESS, NEED_FIX, NEED_NEW_PLAN, GIVE_UP
+    lint_fails: int         # счётчик lint failures
     time_started: float     # для замера TTS
     time_finished: float
 
@@ -59,14 +60,14 @@ def build_graph(
 
     def linter_node(state: AgentState) -> AgentState:
         print("\n🔍 [LINTER] Static analysis...")
-        lint_fails = state.get("_lint_fails", 0)
+        lint_fails = state.get("lint_fails", 0)
         lint_result = sandbox.lint(state["draft_code"])
         if lint_result:
             lint_fails += 1
             if lint_fails >= 2:
                 # Gave coder a chance, skip lint and proceed to tester
                 print(f"    Lint issues remain after {lint_fails} attempts — proceeding to tests anyway")
-                return {**state, "status": "LINT_OK", "_lint_fails": 0}
+                return {**state, "status": "LINT_OK", "lint_fails": 0}
             print(f"    Found issues (attempt {lint_fails}/2) — sending back to coder")
             for line in lint_result.output.split("\n")[:5]:
                 print(f"    {line}")
@@ -74,10 +75,10 @@ def build_graph(
                 **state,
                 "sandbox_result": lint_result.output,
                 "status": "LINT_FAIL",
-                "_lint_fails": lint_fails,
+                "lint_fails": lint_fails,
             }
         print("    Clean")
-        return {**state, "status": "LINT_OK", "_lint_fails": 0}
+        return {**state, "status": "LINT_OK", "lint_fails": 0}
 
     def executor_node(state: AgentState) -> AgentState:
         print("\n⚡ [EXECUTOR] Running code in sandbox...")
@@ -211,6 +212,7 @@ def run_task(
         "sandbox_result": "",
         "iterations": 0,
         "slow_iterations": 0,
+        "lint_fails": 0,
         "status": "",
         "time_started": 0.0,
         "time_finished": 0.0,
