@@ -118,7 +118,7 @@ tailwind.config = {
   </div>
 
   <!-- Log (compact, max 6 lines) -->
-  <div id="log-box" class="hidden bg-card2 rounded-xl border border-border p-3 font-mono text-xs max-h-[160px] overflow-y-auto space-y-1">
+  <div id="log-box" class="hidden bg-card2 rounded-xl border border-border p-3 font-mono text-xs max-h-[300px] overflow-y-auto space-y-1">
   </div>
 
   <!-- Code Output -->
@@ -232,8 +232,6 @@ tailwind.config = {
     const color = type === 'pass' ? 'text-accent2' : type === 'fail' ? 'text-err' : type === 'agent' ? 'text-accent' : 'text-dim';
     div.innerHTML = `<span class="${color}">${esc(msg)}</span>`;
     logBox.appendChild(div);
-    // Keep only last 8 entries
-    while (logBox.children.length > 8) logBox.removeChild(logBox.firstChild);
     logBox.scrollTop = logBox.scrollHeight;
   }
 
@@ -309,14 +307,22 @@ tailwind.config = {
                 });
               }
 
-              agentMsg.textContent = `Done: ${ev.status} in ${ev.tts}s`;
+              agentMsg.textContent = ok ? `Done: SUCCESS in ${ev.tts}s` : `Failed: ${ev.status} after ${ev.tts}s`;
 
-              // Mark all agents done on success
-              if (ok) {
-                document.querySelectorAll('.agent-step div').forEach(el => {
-                  el.className = 'w-9 h-9 rounded-lg bg-accent2/20 border border-accent2 flex items-center justify-center text-accent2 text-xs font-bold';
-                });
-              }
+              // Mark pipeline final state
+              document.querySelectorAll('.agent-step div').forEach(el => {
+                const wasVisited = el.classList.contains('bg-accent2/20') || el.classList.contains('bg-accent/20');
+                if (ok) {
+                  if (wasVisited || el.closest('.agent-step')) {
+                    el.className = 'w-9 h-9 rounded-lg bg-accent2/20 border border-accent2 flex items-center justify-center text-accent2 text-xs font-bold';
+                  }
+                } else {
+                  // GIVE_UP / error: turn visited agents RED
+                  if (wasVisited) {
+                    el.className = 'w-9 h-9 rounded-lg bg-err/20 border border-err flex items-center justify-center text-err text-xs font-bold';
+                  }
+                }
+              });
 
             } else if (ev.agent === 'error') {
               addLog('Error: ' + ev.message, 'fail');

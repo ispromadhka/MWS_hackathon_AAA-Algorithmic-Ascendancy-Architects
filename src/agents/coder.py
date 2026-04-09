@@ -20,6 +20,8 @@ CRITICAL Lua rules — violating these causes instant failure:
 - Build strings with table.insert() + table.concat(), NOT with '..' in loops (O(n^2)).
 - nil and false are BOTH falsy but NOT the same. Use 'x == nil' to check existence when values can be false.
 - Use math.floor() for integer division: math.floor((a+b)/2).
+- 'return' at module level MUST be the LAST statement. NEVER put code after 'return ModuleName'.
+- If the task is for nginx/OpenResty: code is a HANDLER script (not a standalone program). Use ngx.say(), ngx.req.get_headers(), ngx.exit(), ngx.var.*, ngx.status. Do NOT wrap in functions unless asked — just write the handler code directly. Do NOT use standard io/print — use ngx.say() instead.
 
 Output: Pure Lua code only. No markdown fences. No commentary."""
 
@@ -37,10 +39,13 @@ def _get_coder_temperature(state: dict) -> float:
 
 def _compress_error_context(sandbox_result: str, max_lines: int = 15) -> str:
     """Сжимает error output — оставляет только ошибки и ближайший контекст."""
+    # Structural errors like <eof> need full context — don't compress
+    if "<eof>" in sandbox_result or "expected near" in sandbox_result:
+        return sandbox_result[:2000]
+
     lines = sandbox_result.strip().split("\n")
     if len(lines) <= max_lines:
         return sandbox_result
-    # Оставляем FAIL строки, error строки, и последние 5 строк (summary)
     important = []
     for line in lines:
         if any(kw in line for kw in ("[FAIL]", "error", "Error", "attempt to", "stack traceback", "INSTRUCTION_LIMIT", "MEMORY_LIMIT")):

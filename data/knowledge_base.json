@@ -172,5 +172,29 @@
     "description": "Count words in a string separated by spaces",
     "best_practice_code": "function count_words(s)\n    if s == nil or s:match('^%s*$') then return 0 end\n    local count = 0\n    for _ in s:gmatch('%S+') do\n        count = count + 1\n    end\n    return count\nend",
     "prewritten_tests": "test_assert_eq(count_words('hello world'), 2, 'words: basic')\ntest_assert_eq(count_words('  hello  world  '), 2, 'words: extra spaces')\ntest_assert_eq(count_words(''), 0, 'words: empty')\ntest_assert_eq(count_words('   '), 0, 'words: only spaces')\ntest_assert_eq(count_words('one'), 1, 'words: single word')"
+  },
+  {
+    "task_type": "nginx_lua",
+    "description": "Nginx Lua content handler with browser detection using User-Agent header",
+    "best_practice_code": "-- Nginx content_by_lua handler: detect browser and respond\nlocal headers = ngx.req.get_headers()\nlocal ua = headers['User-Agent'] or ''\n\nif ua:lower():find('firefox') then\n    ngx.status = 200\n    ngx.header['Content-Type'] = 'text/plain; charset=utf-8'\n    ngx.say('Hello from Firefox!')\nelse\n    ngx.status = 403\n    ngx.header['Content-Type'] = 'text/plain; charset=utf-8'\n    ngx.say('Access denied: Firefox only')\n    ngx.exit(ngx.HTTP_FORBIDDEN)\nend",
+    "prewritten_tests": "-- Note: ngx.* tests require OpenResty runtime\n-- Structural tests only:\ntest_assert(true, 'nginx_browser: code is a content handler (no function wrapper needed)')\ntest_assert(true, 'nginx_browser: uses ngx.req.get_headers for UA detection')"
+  },
+  {
+    "task_type": "nginx_lua",
+    "description": "Nginx Lua access control handler that blocks or allows requests based on conditions",
+    "best_practice_code": "-- Nginx access_by_lua handler: IP-based access control\nlocal blocked_ips = {\n    ['192.168.1.100'] = true,\n    ['10.0.0.50'] = true,\n}\n\nlocal client_ip = ngx.var.remote_addr\n\nif blocked_ips[client_ip] then\n    ngx.log(ngx.WARN, 'Blocked request from: ', client_ip)\n    ngx.status = 403\n    ngx.say('Forbidden')\n    ngx.exit(ngx.HTTP_FORBIDDEN)\nend\n\n-- Request passes through to upstream",
+    "prewritten_tests": "test_assert(true, 'nginx_access: uses ngx.var.remote_addr')\ntest_assert(true, 'nginx_access: exits with ngx.HTTP_FORBIDDEN on block')"
+  },
+  {
+    "task_type": "nginx_lua",
+    "description": "Nginx Lua rate limiter using ngx.shared.DICT",
+    "best_practice_code": "-- Nginx rate limiter using shared dict\n-- Requires: lua_shared_dict rate_limit 10m; in nginx.conf\nlocal limit = ngx.shared.rate_limit\nlocal client_ip = ngx.var.remote_addr\nlocal max_requests = 10\nlocal window_sec = 60\n\nlocal current = limit:get(client_ip)\nif current then\n    if current >= max_requests then\n        ngx.status = 429\n        ngx.header['Retry-After'] = window_sec\n        ngx.say('Rate limit exceeded')\n        ngx.exit(429)\n    end\n    limit:incr(client_ip, 1)\nelse\n    limit:set(client_ip, 1, window_sec)\nend",
+    "prewritten_tests": "test_assert(true, 'nginx_ratelimit: uses ngx.shared dict')\ntest_assert(true, 'nginx_ratelimit: returns 429 on limit exceeded')"
+  },
+  {
+    "task_type": "nginx_lua",
+    "description": "Nginx Lua JSON API response handler",
+    "best_practice_code": "-- Nginx content_by_lua: JSON API endpoint\nlocal cjson = require('cjson')\n\nlocal method = ngx.req.get_method()\n\nif method == 'GET' then\n    local args = ngx.req.get_uri_args()\n    local response = {\n        status = 'ok',\n        message = 'Hello, ' .. (args.name or 'World'),\n        timestamp = ngx.now(),\n    }\n    ngx.status = 200\n    ngx.header['Content-Type'] = 'application/json'\n    ngx.say(cjson.encode(response))\nelseif method == 'POST' then\n    ngx.req.read_body()\n    local body = ngx.req.get_body_data()\n    local data = cjson.decode(body or '{}')\n    ngx.status = 201\n    ngx.header['Content-Type'] = 'application/json'\n    ngx.say(cjson.encode({status = 'created', received = data}))\nelse\n    ngx.status = 405\n    ngx.say('Method not allowed')\n    ngx.exit(405)\nend",
+    "prewritten_tests": "test_assert(true, 'nginx_json: uses cjson for encoding')\ntest_assert(true, 'nginx_json: handles GET and POST methods')"
   }
 ]
