@@ -1,605 +1,363 @@
 <!DOCTYPE html>
-
-<html class="dark" lang="en"><head>
+<html class="dark" lang="en">
+<head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Synthetix Code | Multi-Agent Orchestrator</title>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<script id="tailwind-config">
-        tailwind.config = {
-          darkMode: "class",
-          theme: {
-            extend: {
-              "colors": {
-                      "on-secondary-fixed": "#003853",
-                      "tertiary-dim": "#58e7ab",
-                      "on-secondary-container": "#f3f8ff",
-                      "on-secondary": "#003047",
-                      "secondary-container": "#006591",
-                      "inverse-surface": "#faf8ff",
-                      "secondary-dim": "#17a8ec",
-                      "error-dim": "#d73357",
-                      "on-tertiary": "#006443",
-                      "on-primary": "#3c0089",
-                      "outline-variant": "#40485d",
-                      "inverse-on-surface": "#4d556b",
-                      "inverse-primary": "#742fe5",
-                      "on-error-container": "#ffb2b9",
-                      "surface-bright": "#1f2b49",
-                      "surface-variant": "#192540",
-                      "on-primary-fixed-variant": "#390083",
-                      "on-secondary-fixed-variant": "#00567c",
-                      "outline": "#6d758c",
-                      "surface-dim": "#060e20",
-                      "on-surface-variant": "#a3aac4",
-                      "on-tertiary-fixed": "#00452d",
-                      "primary-container": "#b28cff",
-                      "tertiary": "#9bffce",
-                      "on-error": "#490013",
-                      "on-background": "#dee5ff",
-                      "secondary": "#34b5fa",
-                      "surface-container": "#0f1930",
-                      "on-tertiary-fixed-variant": "#006544",
-                      "primary-fixed-dim": "#a67aff",
-                      "on-primary-container": "#2e006c",
-                      "primary-fixed": "#b28cff",
-                      "surface": "#060e20",
-                      "tertiary-container": "#69f6b8",
-                      "surface-container-lowest": "#000000",
-                      "secondary-fixed": "#a4d8ff",
-                      "background": "#060e20",
-                      "secondary-fixed-dim": "#81ccff",
-                      "on-primary-fixed": "#000000",
-                      "primary": "#bd9dff",
-                      "on-surface": "#dee5ff",
-                      "surface-container-high": "#141f38",
-                      "surface-container-low": "#091328",
-                      "tertiary-fixed-dim": "#58e7ab",
-                      "tertiary-fixed": "#69f6b8",
-                      "primary-dim": "#8a4cfc",
-                      "error-container": "#a70138",
-                      "surface-tint": "#bd9dff",
-                      "error": "#ff6e84",
-                      "on-tertiary-container": "#005a3c",
-                      "surface-container-highest": "#192540"
-              },
-              "borderRadius": {
-                      "DEFAULT": "0.125rem",
-                      "lg": "0.25rem",
-                      "xl": "0.5rem",
-                      "full": "0.75rem"
-              },
-              "fontFamily": {
-                      "headline": ["Manrope"],
-                      "body": ["Inter"],
-                      "label": ["Inter"],
-                      "mono": ["JetBrains Mono"]
-              }
-            },
-          },
-        }
-    </script>
+<title>Synthetix Code</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script>
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        bg: "#0a0e1a",
+        card: "#111827",
+        card2: "#1a2235",
+        border: "#1e293b",
+        accent: "#818cf8",
+        accent2: "#34d399",
+        dim: "#64748b",
+        err: "#f87171",
+      },
+      fontFamily: {
+        mono: ["JetBrains Mono", "monospace"],
+        sans: ["Inter", "sans-serif"],
+      }
+    }
+  }
+}
+</script>
 <style>
-        body { font-family: 'Inter', sans-serif; }
-        .font-headline { font-family: 'Manrope', sans-serif; }
-        .font-mono { font-family: 'JetBrains Mono', monospace; }
-        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
-        .glass-panel { background: rgba(25, 37, 64, 0.6); backdrop-filter: blur(12px); }
-        .active-glow { box-shadow: 0 0 20px rgba(138, 76, 252, 0.2); }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #060e20; }
-        ::-webkit-scrollbar-thumb { background: #192540; border-radius: 10px; }
-    </style>
+  body { background: #0a0e1a; }
+  .agent-pulse { animation: pulse-dot 1.5s ease-in-out infinite; }
+  @keyframes pulse-dot { 0%,100% { opacity:0.4 } 50% { opacity:1 } }
+  .fade-in { animation: fadeIn 0.3s ease-out; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:translateY(0) } }
+  textarea:focus { outline: none; }
+  pre code { font-family: "JetBrains Mono", monospace; }
+  .kw { color: #c084fc; }
+  .str { color: #34d399; }
+  .num { color: #fbbf24; }
+  .cmt { color: #475569; font-style: italic; }
+  .fn { color: #60a5fa; }
+</style>
 </head>
-<body class="bg-surface text-on-surface selection:bg-primary-container selection:text-on-primary-container min-h-screen flex flex-col">
-<!-- TopNavBar -->
-<nav class="w-full top-0 sticky bg-[#060e20] dark:bg-[#060e20] z-50">
-<div class="flex items-center justify-between px-6 h-16 w-full max-w-none bg-[#0b1429] border-b border-outline-variant/10">
-<div class="flex items-center gap-8">
-<span class="text-xl font-bold text-indigo-500 dark:text-indigo-400 tracking-tight font-headline">Synthetix Code</span>
-<div class="hidden md:flex items-center gap-6">
-<a class="font-manrope font-semibold text-sm text-indigo-400 border-b-2 border-indigo-500 pb-1 duration-200 ease-in-out" href="#">Dashboard</a>
-</div>
-</div>
-<div class="flex items-center gap-4">
-<button class="p-2 text-slate-400 hover:text-slate-200 hover:bg-white/5 rounded-full transition-colors">
-<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
-</button>
-<button class="p-2 text-slate-400 hover:text-slate-200 hover:bg-white/5 rounded-full transition-colors">
-<span class="material-symbols-outlined" data-icon="settings">settings</span>
-</button>
-<div class="h-8 w-8 rounded-full overflow-hidden border border-outline-variant">
-<img alt="User profile" data-alt="Close-up professional headshot of a software engineer with soft natural lighting and a blurred minimalist studio background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDD9RZbsohU2yjwrDRGXudWbs0FxiLxTMXQ5TqxqSCTZ2JPeEHBRIT6LvsFEsPy7NnQwBBkB3zik5RvpyTgr3BsHrBnq8v2-TyFkPuyRuvnp4Y-CtrGhOyoUFkGjBOvFtOnJYLUkVluGOP2qMgDH5nI3mBXdK8pRg9VibZNQlKhaCSMVJ4SKtBh0AFGEq0XcuXdz0-e5ogokEP5D1_QHbQnZPhzC-TKC6f9HOae6X8UVtyVs-YJSlKKTbN8OEBarlLeCaBCOtTIMPv0"/>
-</div>
-</div>
-</div>
-</nav>
-<div class="flex flex-1 overflow-hidden">
-<!-- Sidebar: Chat History -->
-<aside class="w-72 bg-surface-container-low border-r border-outline-variant/10 hidden lg:flex flex-col">
-<div class="p-4 border-b border-outline-variant/10">
-<button class="w-full py-2 px-4 bg-primary-dim/10 text-primary-dim text-xs font-bold rounded-lg border border-primary-dim/20 hover:bg-primary-dim/20 transition-all flex items-center justify-center gap-2">
-<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
-                    New Session
-                </button>
-</div>
-<div class="flex-1 overflow-y-auto p-4 space-y-6">
-<div>
-<h3 class="text-[10px] font-bold text-outline uppercase tracking-widest mb-3">Recent Chats</h3>
-<div class="space-y-1">
-<button class="w-full text-left p-2 rounded-lg bg-surface-container-highest border border-outline-variant/20 flex items-start gap-3 transition-colors">
-<span class="material-symbols-outlined text-secondary text-sm mt-0.5" data-icon="chat_bubble">chat_bubble</span>
-<div class="overflow-hidden">
-<p class="text-xs font-semibold truncate text-on-surface">Crypto Tracker API</p>
-<p class="text-[10px] text-on-surface-variant truncate">FastAPI + Redis caching...</p>
-</div>
-</button>
-<button class="w-full text-left p-2 rounded-lg hover:bg-surface-container-high flex items-start gap-3 transition-colors group">
-<span class="material-symbols-outlined text-outline group-hover:text-secondary text-sm mt-0.5" data-icon="chat_bubble">chat_bubble</span>
-<div class="overflow-hidden">
-<p class="text-xs font-semibold truncate text-on-surface-variant group-hover:text-on-surface">Game Loop Pattern</p>
-<p class="text-[10px] text-outline truncate">Lua script for ECS system...</p>
-</div>
-</button>
-<button class="w-full text-left p-2 rounded-lg hover:bg-surface-container-high flex items-start gap-3 transition-colors group">
-<span class="material-symbols-outlined text-outline group-hover:text-secondary text-sm mt-0.5" data-icon="chat_bubble">chat_bubble</span>
-<div class="overflow-hidden">
-<p class="text-xs font-semibold truncate text-on-surface-variant group-hover:text-on-surface">OAuth2 Middleware</p>
-<p class="text-[10px] text-outline truncate">Implementing JWT tokens...</p>
-</div>
-</button>
-</div>
-</div>
-<div>
-<h3 class="text-[10px] font-bold text-outline uppercase tracking-widest mb-3">History</h3>
-<div class="space-y-1 opacity-70">
-<button class="w-full text-left p-2 rounded-lg hover:bg-surface-container-high flex items-start gap-3 transition-colors group">
-<span class="material-symbols-outlined text-outline text-sm mt-0.5" data-icon="history">history</span>
-<div class="overflow-hidden">
-<p class="text-xs font-semibold truncate text-outline">Rust CLI Tool</p>
-<p class="text-[10px] text-outline truncate">Yesterday</p>
-</div>
-</button>
-<button class="w-full text-left p-2 rounded-lg hover:bg-surface-container-high flex items-start gap-3 transition-colors group">
-<span class="material-symbols-outlined text-outline text-sm mt-0.5" data-icon="history">history</span>
-<div class="overflow-hidden">
-<p class="text-xs font-semibold truncate text-outline">Tailwind Layouts</p>
-<p class="text-[10px] text-outline truncate">3 days ago</p>
-</div>
-</button>
-</div>
-</div>
-</div>
-<div class="p-4 bg-surface-container/30 border-t border-outline-variant/10">
-<div class="flex items-center justify-between text-[10px] text-outline font-mono">
-<span>Usage: 42%</span>
-<span>Pro Plan</span>
-</div>
-<div class="mt-2 w-full h-1 bg-surface-container-highest rounded-full overflow-hidden">
-<div class="w-[42%] h-full bg-primary-dim"></div>
-</div>
-</div>
-</aside>
-<main class="flex-1 overflow-y-auto bg-surface">
-<div class="max-w-5xl mx-auto px-6 py-12 space-y-24">
-<!-- Phase 1: Input Phase -->
-<section class="flex flex-col items-center justify-center min-h-[400px] text-center space-y-8">
-<div class="space-y-4">
-<h1 class="text-4xl md:text-6xl font-headline font-extrabold tracking-tight text-on-surface">
-                            What are we <span class="text-primary-dim">building</span> today?
-                        </h1>
-<p class="text-on-surface-variant max-w-2xl mx-auto font-body">
-                            Orchestrate multiple specialized AI agents to generate, architect, and deploy production-ready code in seconds.
-                        </p>
-</div>
-<div class="w-full max-w-3xl glass-panel p-2 rounded-xl active-glow transition-all duration-300 border border-outline-variant/20">
-<div class="flex flex-col md:flex-row gap-2">
-<div class="flex-grow relative">
-<textarea class="w-full bg-transparent border-none focus:ring-0 text-on-surface placeholder:text-outline p-4 min-h-[120px] resize-none font-body" placeholder="e.g. Create a Lua module for handling state-based character animations in a side-scroller..."></textarea>
-</div>
-</div>
-<div class="flex items-center justify-between px-4 pb-4">
-<div class="flex items-center gap-2">
-<span class="flex items-center gap-1 text-[10px] uppercase tracking-widest font-bold text-tertiary-dim bg-tertiary-dim/10 px-2 py-1 rounded">
-<span class="material-symbols-outlined text-xs" data-icon="auto_awesome">auto_awesome</span> Multi-Agent Active
-                                </span>
-</div>
-<button class="bg-primary-container text-on-primary-container font-headline font-bold py-2 px-6 rounded-md hover:brightness-110 transition-all flex items-center gap-2">
-                                Generate Code
-                                <span class="material-symbols-outlined text-sm" data-icon="terminal">terminal</span>
-</button>
-</div>
-</div>
-</section>
-<!-- Phase 2: Reasoning Phase (Thought Stream) -->
-<section class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-<div class="lg:col-span-4 sticky top-24 space-y-4">
-<div class="inline-flex items-center gap-2 text-primary-dim mb-2">
-<span class="material-symbols-outlined" data-icon="psychology">psychology</span>
-<span class="text-sm font-bold tracking-widest uppercase">Orchestration Logic</span>
-</div>
-<h2 class="text-3xl font-headline font-bold">Reasoning Engine</h2>
-<p class="text-on-surface-variant text-sm leading-relaxed">
-                            Observe how specialized agents collaborate to decompose your requirements into structural blueprints and executable logic.
-                        </p>
-<!-- Agent Status Stack -->
-<div class="space-y-3 pt-6">
-<div class="flex items-center gap-3 p-3 rounded-lg bg-surface-container-high border-l-4 border-primary">
-<div class="h-8 w-8 rounded bg-primary/20 flex items-center justify-center">
-<span class="material-symbols-outlined text-primary" data-icon="architecture">architecture</span>
-</div>
-<div>
-<p class="text-xs font-bold">Architect Agent</p>
-<p class="text-[10px] text-primary">Defining Module Structure</p>
-</div>
-</div>
-<div class="flex items-center gap-3 p-3 rounded-lg bg-surface-container-low opacity-60">
-<div class="h-8 w-8 rounded bg-secondary/20 flex items-center justify-center">
-<span class="material-symbols-outlined text-secondary" data-icon="data_object">data_object</span>
-</div>
-<div>
-<p class="text-xs font-bold">Coder Agent</p>
-<p class="text-[10px] text-outline">Waiting...</p>
-</div>
-</div>
-</div>
-</div>
-<div class="lg:col-span-8 space-y-6">
-<!-- Thought Bubbles -->
-<div class="bg-surface-container-low rounded-xl p-8 space-y-8 relative overflow-hidden">
-<!-- Subtle background pulse texture -->
-<div class="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(circle_at_50%_50%,_#8a4cfc_0%,_transparent_50%)]"></div>
-<div class="flex gap-4 group">
-<div class="flex-shrink-0 w-12 text-right">
-<span class="text-[10px] font-mono text-outline">04:12</span>
-</div>
-<div class="space-y-2">
-<div class="flex items-center gap-2">
-<span class="text-xs font-bold text-primary">[Architect]</span>
-<div class="h-[1px] w-12 bg-outline-variant"></div>
-</div>
-<p class="text-sm text-on-surface leading-relaxed font-body bg-surface-container-high p-4 rounded-lg rounded-tl-none border border-outline-variant/10">
-                                        Parsed request for <span class="text-secondary">Lua</span> module. Initializing scriptable entity component. Defining lifecycle hooks: <span class="font-mono text-xs px-1 bg-surface-container-highest">init() -&gt; update(dt) -&gt; draw()</span>.
-                                    </p>
-</div>
-</div>
-<div class="flex gap-4 group">
-<div class="flex-shrink-0 w-12 text-right">
-<span class="text-[10px] font-mono text-outline">04:13</span>
-</div>
-<div class="space-y-2">
-<div class="flex items-center gap-2">
-<span class="text-xs font-bold text-tertiary-dim">[System]</span>
-<div class="h-[1px] w-12 bg-outline-variant"></div>
-</div>
-<p class="text-sm text-on-surface-variant italic font-body bg-surface-container/50 p-4 rounded-lg rounded-tl-none border border-outline-variant/5">
-                                        Applying garbage collection optimizations for table-intensive loops. Selecting local variable caching pattern.
-                                    </p>
-</div>
-</div>
-<div class="flex gap-4 group">
-<div class="flex-shrink-0 w-12 text-right">
-<span class="text-[10px] font-mono text-outline">04:15</span>
-</div>
-<div class="space-y-2">
-<div class="flex items-center gap-2">
-<span class="text-xs font-bold text-secondary">[Coder]</span>
-<div class="h-[1px] w-12 bg-outline-variant"></div>
-</div>
-<p class="text-sm text-on-surface leading-relaxed font-body bg-surface-container-high p-4 rounded-lg rounded-tl-none border border-outline-variant/10 active-glow">
-                                        Generating Lua module interface. Implementing <span class="font-mono text-xs px-1 bg-surface-container-highest">setmetatable</span> for pseudo-OO behavior. Drafting core animation loop logic...
-                                    </p>
-</div>
-</div>
-<!-- Continuous activity indicator -->
-<div class="flex items-center gap-4 text-outline py-4">
-<div class="w-12"></div>
-<div class="flex items-center gap-2">
-<span class="relative flex h-2 w-2">
-<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-<span class="relative inline-flex rounded-full h-2 w-2 bg-primary-dim"></span>
-</span>
-<span class="text-[10px] font-mono uppercase tracking-widest">Synthesizing final output...</span>
-</div>
-</div>
-</div>
-</div>
-</section>
-<!-- Phase 3: Output Phase (Code Editor) -->
-<section class="space-y-6">
-<div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
-<div class="space-y-1">
-<div class="inline-flex items-center gap-2 text-secondary mb-1">
-<span class="material-symbols-outlined" data-icon="code">code</span>
-<span class="text-sm font-bold tracking-widest uppercase">Final Workspace</span>
-</div>
-<h2 class="text-3xl font-headline font-bold">Generated Artifact</h2>
-</div>
-<div class="flex items-center gap-2">
-<button class="px-4 py-2 bg-surface-container-highest text-on-surface text-xs font-bold rounded-md hover:bg-surface-bright transition-colors flex items-center gap-2">
-<span class="material-symbols-outlined text-sm" data-icon="content_copy">content_copy</span> Copy
-                            </button>
-<button class="px-4 py-2 bg-secondary-container text-on-secondary-container text-xs font-bold rounded-md hover:brightness-110 transition-colors flex items-center gap-2">
-<span class="material-symbols-outlined text-sm" data-icon="rocket_launch">rocket_launch</span> Deploy
-                            </button>
-</div>
-</div>
-<!-- Editor Window -->
-<div class="rounded-xl overflow-hidden shadow-2xl shadow-black/80 bg-surface-container-lowest border border-outline-variant/20">
-<!-- Mac-style Header -->
-<div class="bg-surface-container px-4 py-3 flex items-center justify-between border-b border-outline-variant/10">
-<div class="flex items-center gap-2">
-<div class="flex gap-1.5">
-<div class="w-3 h-3 rounded-full bg-[#ff5f56]"></div>
-<div class="w-3 h-3 rounded-full bg-[#ffbd2e]"></div>
-<div class="w-3 h-3 rounded-full bg-[#27c93f]"></div>
-</div>
-<div class="ml-4 flex items-center gap-2 bg-surface-container-lowest px-3 py-1 rounded-t-lg border-x border-t border-outline-variant/10">
-<span class="material-symbols-outlined text-sm text-secondary" data-icon="description">description</span>
-<span class="text-[11px] font-mono text-on-surface-variant">animator.lua</span>
-</div>
-<div class="flex items-center gap-2 px-3 py-1 opacity-50">
-<span class="material-symbols-outlined text-sm text-outline" data-icon="description">description</span>
-<span class="text-[11px] font-mono text-on-surface-variant">config.lua</span>
-</div>
-</div>
-<div class="text-[10px] font-mono text-outline">Lua 5.4 | UTF-8</div>
-</div>
-<!-- Code Content (Lua) -->
-<div class="p-6 font-mono text-sm leading-relaxed overflow-x-auto">
-<pre class="grid grid-cols-[3rem_1fr] gap-4">                        <span class="text-outline text-right select-none opacity-40">1</span><code class="text-on-surface"><span class="text-primary-dim">local</span> Animator = {}</code>
-                        <span class="text-outline text-right select-none opacity-40">2</span><code class="text-on-surface">Animator.__index = Animator</code>
-                        <span class="text-outline text-right select-none opacity-40">3</span><code class="text-on-surface"></code>
-                        <span class="text-outline text-right select-none opacity-40">4</span><code class="text-on-surface"><span class="text-primary-dim">function</span> <span class="text-secondary">Animator.new</span>(frames, speed)</code>
-                        <span class="text-outline text-right select-none opacity-40">5</span><code class="text-on-surface">    <span class="text-primary-dim">local</span> self = <span class="text-secondary">setmetatable</span>({}, Animator)</code>
-                        <span class="text-outline text-right select-none opacity-40">6</span><code class="text-on-surface">    self.frames = frames</code>
-                        <span class="text-outline text-right select-none opacity-40">7</span><code class="text-on-surface">    self.speed = speed <span class="text-primary-dim">or</span> <span class="text-tertiary">0.1</span></code>
-                        <span class="text-outline text-right select-none opacity-40">8</span><code class="text-on-surface">    self.current = <span class="text-tertiary">1</span></code>
-                        <span class="text-outline text-right select-none opacity-40">9</span><code class="text-on-surface">    <span class="text-primary-dim">return</span> self</code>
-                        <span class="text-outline text-right select-none opacity-40">10</span><code class="text-on-surface"><span class="text-primary-dim">end</span></code>
-                        <span class="text-outline text-right select-none opacity-40">11</span><code class="text-on-surface"></code>
-                        <span class="text-outline text-right select-none opacity-40">12</span><code class="text-on-surface"><span class="text-primary-dim">function</span> <span class="text-secondary">Animator:update</span>(dt)</code>
-                        <span class="text-outline text-right select-none opacity-40">13</span><code class="text-on-surface">    <span class="text-primary-dim">for</span> i = <span class="text-tertiary">1</span>, <span class="text-secondary">#</span>self.frames <span class="text-primary-dim">do</span></code>
-                        <span class="text-outline text-right select-none opacity-40">14</span><code class="text-on-surface">        self.current = (self.current <span class="text-secondary">%</span> <span class="text-secondary">#</span>self.frames) <span class="text-secondary">+</span> <span class="text-tertiary">1</span></code>
-                        <span class="text-outline text-right select-none opacity-40">15</span><code class="text-on-surface">    <span class="text-primary-dim">end</span></code>
-                        <span class="text-outline text-right select-none opacity-40">16</span><code class="text-on-surface"><span class="text-primary-dim">end</span></code>
-                        <span class="text-outline text-right select-none opacity-40">17</span><code class="text-on-surface"></code>
-                        <span class="text-outline text-right select-none opacity-40">18</span><code class="text-on-surface"><span class="text-primary-dim">return</span> Animator</code>
-                            </pre>
-</div>
-<!-- Footer Status -->
-<div class="bg-surface-container px-4 py-2 border-t border-outline-variant/10 flex items-center justify-between">
-<div class="flex items-center gap-4 text-[10px] font-mono text-outline">
-<div class="flex items-center gap-1">
-<span class="material-symbols-outlined text-[12px] text-tertiary-dim" data-icon="check_circle">check_circle</span>
-                                    No syntax errors
-                                </div>
-<div class="flex items-center gap-1">
-<span class="material-symbols-outlined text-[12px]" data-icon="history">history</span>
-                                    v1.0.5 Generated
-                                </div>
-</div>
-<div class="flex items-center gap-4 text-[10px] font-mono text-outline">
-<span>Ln 18, Col 15</span>
-<span>Spaces: 4</span>
-</div>
-</div>
-</div>
-</section>
-</div>
-<!-- Footer -->
-<footer class="border-t border-outline-variant/10 mt-24 py-12 bg-surface-container-low">
-<div class="max-w-5xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-8">
-<div class="space-y-2 text-center md:text-left">
-<span class="text-lg font-bold text-indigo-400 font-headline">Synthetix Code</span>
-<p class="text-xs text-outline">The Digital Atelier for Modern Engineering.</p>
-</div>
-<div class="flex gap-8 text-xs font-medium text-on-surface-variant">
-<a class="hover:text-primary transition-colors" href="#">Documentation</a>
-<a class="hover:text-primary transition-colors" href="#">API Keys</a>
-<a class="hover:text-primary transition-colors" href="#">Security</a>
-<a class="hover:text-primary transition-colors" href="#">Terms</a>
-</div>
-<div class="flex items-center gap-4">
-<div class="flex -space-x-2">
-<div class="h-6 w-6 rounded-full bg-primary/20 border border-surface flex items-center justify-center">
-<span class="material-symbols-outlined text-[12px] text-primary" data-icon="bolt">bolt</span>
-</div>
-<div class="h-6 w-6 rounded-full bg-secondary/20 border border-surface flex items-center justify-center">
-<span class="material-symbols-outlined text-[12px] text-secondary" data-icon="psychology">psychology</span>
-</div>
-<div class="h-6 w-6 rounded-full bg-tertiary/20 border border-surface flex items-center justify-center">
-<span class="material-symbols-outlined text-[12px] text-tertiary-dim" data-icon="terminal">terminal</span>
-</div>
-</div>
-<span class="text-[10px] font-mono text-outline uppercase tracking-widest">v2.4.0 Engine</span>
-</div>
-</div>
-</footer>
+<body class="text-slate-200 font-sans min-h-screen flex flex-col">
+
+<!-- Header -->
+<header class="border-b border-border px-6 py-3 flex items-center justify-between flex-shrink-0">
+  <div class="flex items-center gap-3">
+    <div class="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center">
+      <svg class="w-4 h-4 text-accent" fill="currentColor" viewBox="0 0 20 20"><path d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z"/></svg>
+    </div>
+    <span class="text-lg font-bold tracking-tight">Synthetix Code</span>
+  </div>
+  <div class="flex items-center gap-2 text-xs text-dim font-mono">
+    <span id="health-dot" class="w-2 h-2 rounded-full bg-dim"></span>
+    <span id="health-text">connecting...</span>
+  </div>
+</header>
+
+<!-- Main Content -->
+<main class="flex-1 max-w-4xl w-full mx-auto px-6 py-8 flex flex-col gap-6">
+
+  <!-- Input -->
+  <div class="bg-card rounded-xl border border-border overflow-hidden">
+    <textarea id="task-input" rows="3" class="w-full bg-transparent text-slate-200 placeholder:text-dim p-4 resize-none font-sans text-sm leading-relaxed" placeholder="Describe your Lua task... (Cmd+Enter to generate)"></textarea>
+    <div class="flex items-center justify-between px-4 pb-3">
+      <span class="text-[10px] text-dim font-mono uppercase tracking-wider">Multi-Agent Pipeline</span>
+      <button id="gen-btn" class="bg-accent hover:bg-accent/80 text-white text-sm font-semibold py-2 px-5 rounded-lg transition-all flex items-center gap-2">
+        Generate
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Agent Pipeline (horizontal steps) -->
+  <div id="pipeline" class="hidden bg-card rounded-xl border border-border p-4">
+    <div class="flex items-center justify-between gap-1 overflow-x-auto">
+      <div class="agent-step flex flex-col items-center gap-1 min-w-[70px]" data-agent="rag">
+        <div class="w-9 h-9 rounded-lg bg-slate-800 border border-border flex items-center justify-center text-dim text-xs font-bold">RAG</div>
+        <span class="text-[9px] text-dim font-mono">Search</span>
+      </div>
+      <div class="text-dim text-xs">&#8594;</div>
+      <div class="agent-step flex flex-col items-center gap-1 min-w-[70px]" data-agent="planner">
+        <div class="w-9 h-9 rounded-lg bg-slate-800 border border-border flex items-center justify-center text-dim text-xs font-bold">PLN</div>
+        <span class="text-[9px] text-dim font-mono">Plan</span>
+      </div>
+      <div class="text-dim text-xs">&#8594;</div>
+      <div class="agent-step flex flex-col items-center gap-1 min-w-[70px]" data-agent="coder">
+        <div class="w-9 h-9 rounded-lg bg-slate-800 border border-border flex items-center justify-center text-dim text-xs font-bold">COD</div>
+        <span class="text-[9px] text-dim font-mono">Code</span>
+      </div>
+      <div class="text-dim text-xs">&#8594;</div>
+      <div class="agent-step flex flex-col items-center gap-1 min-w-[70px]" data-agent="linter">
+        <div class="w-9 h-9 rounded-lg bg-slate-800 border border-border flex items-center justify-center text-dim text-xs font-bold">LNT</div>
+        <span class="text-[9px] text-dim font-mono">Lint</span>
+      </div>
+      <div class="text-dim text-xs">&#8594;</div>
+      <div class="agent-step flex flex-col items-center gap-1 min-w-[70px]" data-agent="tester">
+        <div class="w-9 h-9 rounded-lg bg-slate-800 border border-border flex items-center justify-center text-dim text-xs font-bold">TST</div>
+        <span class="text-[9px] text-dim font-mono">Test</span>
+      </div>
+      <div class="text-dim text-xs">&#8594;</div>
+      <div class="agent-step flex flex-col items-center gap-1 min-w-[70px]" data-agent="executor">
+        <div class="w-9 h-9 rounded-lg bg-slate-800 border border-border flex items-center justify-center text-dim text-xs font-bold">RUN</div>
+        <span class="text-[9px] text-dim font-mono">Execute</span>
+      </div>
+      <div class="text-dim text-xs">&#8594;</div>
+      <div class="agent-step flex flex-col items-center gap-1 min-w-[70px]" data-agent="critic">
+        <div class="w-9 h-9 rounded-lg bg-slate-800 border border-border flex items-center justify-center text-dim text-xs font-bold">CRT</div>
+        <span class="text-[9px] text-dim font-mono">Critic</span>
+      </div>
+    </div>
+    <!-- Current agent message -->
+    <div id="agent-msg" class="mt-3 text-xs text-dim font-mono truncate hidden"></div>
+  </div>
+
+  <!-- Log (compact, max 6 lines) -->
+  <div id="log-box" class="hidden bg-card2 rounded-xl border border-border p-3 font-mono text-xs max-h-[160px] overflow-y-auto space-y-1">
+  </div>
+
+  <!-- Code Output -->
+  <div id="code-section" class="hidden flex flex-col gap-2">
+    <!-- Status bar -->
+    <div id="result-bar" class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span id="result-badge" class="text-xs font-bold px-3 py-1 rounded-full"></span>
+        <span id="result-meta" class="text-xs text-dim font-mono"></span>
+      </div>
+      <button id="copy-btn" class="text-xs text-dim hover:text-slate-200 font-mono border border-border rounded px-3 py-1 hover:bg-card transition-colors">Copy</button>
+    </div>
+    <!-- Editor -->
+    <div class="bg-card rounded-xl border border-border overflow-hidden">
+      <div class="bg-card2 px-4 py-2 flex items-center justify-between border-b border-border">
+        <div class="flex items-center gap-2">
+          <div class="flex gap-1.5">
+            <div class="w-2.5 h-2.5 rounded-full bg-red-500/80"></div>
+            <div class="w-2.5 h-2.5 rounded-full bg-yellow-500/80"></div>
+            <div class="w-2.5 h-2.5 rounded-full bg-green-500/80"></div>
+          </div>
+          <span id="file-tab" class="ml-3 text-[11px] font-mono text-dim">output.lua</span>
+        </div>
+        <span class="text-[10px] font-mono text-dim">Lua 5.4</span>
+      </div>
+      <pre id="code-output" class="p-5 font-mono text-sm leading-relaxed overflow-x-auto min-h-[120px] max-h-[400px] overflow-y-auto"><code class="text-dim">-- Your code will appear here</code></pre>
+    </div>
+  </div>
+
+  <!-- Tests Output (compact) -->
+  <div id="tests-section" class="hidden">
+    <details class="bg-card rounded-xl border border-border overflow-hidden">
+      <summary class="px-4 py-3 text-xs font-semibold cursor-pointer hover:bg-card2 transition-colors flex items-center gap-2">
+        <span id="tests-icon">&#9654;</span> Test Results <span id="tests-count" class="text-dim font-mono ml-auto"></span>
+      </summary>
+      <div id="tests-output" class="px-4 pb-3 font-mono text-xs space-y-1"></div>
+    </details>
+  </div>
+
 </main>
-</div>
+
 <script>
 (function() {
-    // DOM elements
-    const textarea = document.querySelector('textarea');
-    const generateBtn = document.querySelector('button.bg-primary-container');
-    const thoughtStream = document.querySelector('.bg-surface-container-low.rounded-xl.p-8');
-    const codeContent = document.querySelector('.font-mono.text-sm.leading-relaxed pre');
-    const statusFooter = document.querySelector('.bg-surface-container.px-4.py-2.border-t');
+  const input = document.getElementById('task-input');
+  const genBtn = document.getElementById('gen-btn');
+  const pipeline = document.getElementById('pipeline');
+  const agentMsg = document.getElementById('agent-msg');
+  const logBox = document.getElementById('log-box');
+  const codeSection = document.getElementById('code-section');
+  const codeOutput = document.getElementById('code-output');
+  const resultBadge = document.getElementById('result-badge');
+  const resultMeta = document.getElementById('result-meta');
+  const copyBtn = document.getElementById('copy-btn');
+  const testsSection = document.getElementById('tests-section');
+  const testsOutput = document.getElementById('tests-output');
+  const testsCount = document.getElementById('tests-count');
+  const healthDot = document.getElementById('health-dot');
+  const healthText = document.getElementById('health-text');
 
-    // Agent status cards
-    const agentCards = document.querySelectorAll('.border-l-4');
-    const architectStatus = document.querySelector('.border-primary .text-\\[10px\\]');
-    const coderStatus = document.querySelector('.opacity-60 .text-\\[10px\\]');
+  let rawCode = '';
+  const testResults = [];
 
-    // Agent emoji map
-    const agentIcons = {
-        rag: { label: 'RAG', color: 'text-secondary' },
-        planner: { label: 'Architect', color: 'text-primary' },
-        coder: { label: 'Coder', color: 'text-secondary' },
-        linter: { label: 'Linter', color: 'text-tertiary-dim' },
-        tester: { label: 'Tester', color: 'text-primary-dim' },
-        executor: { label: 'Executor', color: 'text-tertiary-dim' },
-        critic: { label: 'Critic', color: 'text-secondary' },
-        test_result: { label: 'Test', color: 'text-tertiary-dim' },
-        system: { label: 'System', color: 'text-outline' },
-    };
+  // Health check
+  fetch('/health').then(r => r.json()).then(d => {
+    healthDot.className = 'w-2 h-2 rounded-full bg-accent2';
+    healthText.textContent = `${d.rag_entries} patterns | Lua ${d.lua_available ? 'ready' : 'missing'}`;
+  }).catch(() => {
+    healthDot.className = 'w-2 h-2 rounded-full bg-err';
+    healthText.textContent = 'offline';
+  });
 
-    function formatTime() {
-        const d = new Date();
-        return d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    }
+  function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-    function addThought(agent, message) {
-        const info = agentIcons[agent] || agentIcons.system;
-        // Remove the "synthesizing" indicator if present
-        const spinner = thoughtStream.querySelector('.animate-ping');
-        if (spinner) spinner.closest('.flex.items-center.gap-4')?.remove();
+  function highlightLua(code) {
+    return code.split('\n').map((line, i) => {
+      let h = esc(line);
+      // Comments first
+      h = h.replace(/(--.*$)/, '<span class="cmt">$1</span>');
+      // Strings
+      h = h.replace(/(&quot;(?:[^&]|\\.)*?&quot;|'(?:[^'\\]|\\.)*?'|\[\[[\s\S]*?\]\])/g, '<span class="str">$1</span>');
+      // Keywords
+      h = h.replace(/\b(local|function|end|if|then|else|elseif|for|while|do|return|in|repeat|until|and|or|not|nil|true|false)\b/g, '<span class="kw">$1</span>');
+      // Numbers
+      h = h.replace(/\b(\d+\.?\d*)\b/g, '<span class="num">$1</span>');
+      const ln = String(i + 1).padStart(3, ' ');
+      return `<span class="text-slate-600 select-none">${ln}</span>  ${h}`;
+    }).join('\n');
+  }
 
-        const div = document.createElement('div');
-        div.className = 'flex gap-4 group';
-        div.innerHTML = `
-            <div class="flex-shrink-0 w-12 text-right">
-                <span class="text-[10px] font-mono text-outline">${formatTime()}</span>
-            </div>
-            <div class="space-y-2">
-                <div class="flex items-center gap-2">
-                    <span class="text-xs font-bold ${info.color}">[${info.label}]</span>
-                    <div class="h-[1px] w-12 bg-outline-variant"></div>
-                </div>
-                <p class="text-sm text-on-surface leading-relaxed font-body bg-surface-container-high p-4 rounded-lg rounded-tl-none border border-outline-variant/10">
-                    ${escapeHtml(message)}
-                </p>
-            </div>
-        `;
-        thoughtStream.appendChild(div);
-        thoughtStream.scrollTop = thoughtStream.scrollHeight;
-    }
+  function activateAgent(name) {
+    document.querySelectorAll('.agent-step').forEach(el => {
+      const box = el.querySelector('div');
+      if (el.dataset.agent === name) {
+        box.className = 'w-9 h-9 rounded-lg bg-accent/20 border border-accent flex items-center justify-center text-accent text-xs font-bold agent-pulse';
+      } else if (box.classList.contains('bg-accent2/20')) {
+        // already done, keep
+      } else {
+        box.className = 'w-9 h-9 rounded-lg bg-slate-800 border border-border flex items-center justify-center text-dim text-xs font-bold';
+      }
+    });
+  }
 
-    function escapeHtml(text) {
-        return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-            .replace(/\[PASS\]/g, '<span class="text-tertiary-dim font-bold">[PASS]</span>')
-            .replace(/\[FAIL\]/g, '<span class="text-error-dim font-bold">[FAIL]</span>');
-    }
+  function completeAgent(name) {
+    const el = document.querySelector(`.agent-step[data-agent="${name}"] div`);
+    if (el) el.className = 'w-9 h-9 rounded-lg bg-accent2/20 border border-accent2 flex items-center justify-center text-accent2 text-xs font-bold';
+  }
 
-    function syntaxHighlight(code) {
-        return code
-            .replace(/\b(local|function|end|if|then|else|elseif|for|while|do|return|in|repeat|until|and|or|not|nil|true|false)\b/g,
-                '<span class="text-primary-dim">$1</span>')
-            .replace(/(\b\d+\.?\d*\b)/g, '<span class="text-tertiary">$1</span>')
-            .replace(/(--[^\n]*)/g, '<span class="text-outline">$1</span>')
-            .replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g, '<span class="text-secondary">$1</span>');
-    }
+  function addLog(msg, type) {
+    const div = document.createElement('div');
+    div.className = 'fade-in';
+    const color = type === 'pass' ? 'text-accent2' : type === 'fail' ? 'text-err' : type === 'agent' ? 'text-accent' : 'text-dim';
+    div.innerHTML = `<span class="${color}">${esc(msg)}</span>`;
+    logBox.appendChild(div);
+    // Keep only last 8 entries
+    while (logBox.children.length > 8) logBox.removeChild(logBox.firstChild);
+    logBox.scrollTop = logBox.scrollHeight;
+  }
 
-    function renderCode(code) {
-        if (!code || !codeContent) return;
-        const lines = code.split('\n');
-        codeContent.innerHTML = lines.map((line, i) =>
-            `<span class="text-outline text-right select-none opacity-40">${i+1}</span><code class="text-on-surface">${syntaxHighlight(escapeHtml(line).replace(/<span class="text-error-dim font-bold">/g,'<span>').replace(/<span class="text-tertiary-dim font-bold">/g,'<span>'))}</code>`
-        ).join('\n');
-    }
+  let prevAgent = null;
 
-    function setGenerating(active) {
-        if (active) {
-            generateBtn.disabled = true;
-            generateBtn.innerHTML = `
-                <span class="relative flex h-3 w-3">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-3 w-3 bg-primary-dim"></span>
-                </span>
-                Generating...
-            `;
-        } else {
-            generateBtn.disabled = false;
-            generateBtn.innerHTML = `Generate Code <span class="material-symbols-outlined text-sm" data-icon="terminal">terminal</span>`;
-        }
-    }
+  async function handleGenerate() {
+    const task = input.value.trim();
+    if (!task) { input.focus(); return; }
 
-    async function handleGenerate() {
-        const task = textarea.value.trim();
-        if (!task) { textarea.focus(); return; }
+    // Reset UI
+    genBtn.disabled = true;
+    genBtn.innerHTML = '<span class="agent-pulse">&#9679;</span> Generating...';
+    pipeline.classList.remove('hidden');
+    logBox.classList.remove('hidden');
+    logBox.innerHTML = '';
+    codeSection.classList.add('hidden');
+    testsSection.classList.add('hidden');
+    testsOutput.innerHTML = '';
+    testResults.length = 0;
+    rawCode = '';
+    prevAgent = null;
+    agentMsg.classList.remove('hidden');
+    agentMsg.textContent = 'Starting pipeline...';
 
-        setGenerating(true);
-
-        // Clear previous thoughts (keep structure)
-        thoughtStream.innerHTML = '';
-        renderCode('-- Generating...');
-
-        try {
-            const response = await fetch('/solve/stream', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ task }),
-            });
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let buffer = '';
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split('\n\n');
-                buffer = lines.pop() || '';
-
-                for (const line of lines) {
-                    if (!line.startsWith('data: ')) continue;
-                    try {
-                        const event = JSON.parse(line.slice(6));
-
-                        if (event.agent === 'done') {
-                            renderCode(event.code || '-- No code generated');
-                            addThought('system',
-                                `Result: ${event.status} | TTS: ${event.tts}s | Iterations: ${event.iterations}`);
-                            // Update footer
-                            if (statusFooter) {
-                                const statusEl = statusFooter.querySelector('.flex.items-center.gap-1');
-                                if (statusEl) {
-                                    const icon = event.status === 'SUCCESS' ? 'check_circle' : 'error';
-                                    const color = event.status === 'SUCCESS' ? 'text-tertiary-dim' : 'text-error-dim';
-                                    statusEl.innerHTML = `<span class="material-symbols-outlined text-[12px] ${color}" data-icon="${icon}">${icon}</span> ${event.status} | ${event.tts}s`;
-                                }
-                            }
-                        } else if (event.agent === 'error') {
-                            addThought('system', `Error: ${event.message}`);
-                        } else {
-                            addThought(event.agent, event.message);
-                        }
-                    } catch(e) { /* skip malformed */ }
-                }
-            }
-        } catch (err) {
-            addThought('system', `Connection error: ${err.message}`);
-        } finally {
-            setGenerating(false);
-        }
-    }
-
-    // Event listeners
-    generateBtn.addEventListener('click', handleGenerate);
-    textarea.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-            e.preventDefault();
-            handleGenerate();
-        }
+    // Reset all agent steps
+    document.querySelectorAll('.agent-step div').forEach(el => {
+      el.className = 'w-9 h-9 rounded-lg bg-slate-800 border border-border flex items-center justify-center text-dim text-xs font-bold';
     });
 
-    // Copy button
-    const copyBtn = document.querySelector('button:has(.material-symbols-outlined[data-icon="content_copy"])');
-    if (copyBtn) {
-        copyBtn.addEventListener('click', function() {
-            const code = codeContent?.textContent || '';
-            navigator.clipboard.writeText(code).then(() => {
-                const orig = copyBtn.innerHTML;
-                copyBtn.innerHTML = '<span class="material-symbols-outlined text-sm text-tertiary-dim" data-icon="check">check</span> Copied!';
-                setTimeout(() => { copyBtn.innerHTML = orig; }, 2000);
-            });
-        });
+    try {
+      const resp = await fetch('/solve/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task }),
+      });
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() || '';
+
+        for (const part of parts) {
+          if (!part.startsWith('data: ')) continue;
+          try {
+            const ev = JSON.parse(part.slice(6));
+
+            if (ev.agent === 'done') {
+              rawCode = ev.code || '';
+              codeSection.classList.remove('hidden');
+              codeOutput.innerHTML = `<code>${highlightLua(rawCode)}</code>`;
+
+              const ok = ev.status === 'SUCCESS';
+              resultBadge.textContent = ev.status;
+              resultBadge.className = `text-xs font-bold px-3 py-1 rounded-full ${ok ? 'bg-accent2/20 text-accent2' : 'bg-err/20 text-err'}`;
+              resultMeta.textContent = `${ev.tts}s | ${ev.iterations} iteration${ev.iterations !== 1 ? 's' : ''}`;
+
+              // Show tests
+              if (testResults.length > 0) {
+                testsSection.classList.remove('hidden');
+                const passed = testResults.filter(t => t.pass).length;
+                testsCount.textContent = `${passed}/${testResults.length} passed`;
+                testResults.forEach(t => {
+                  const d = document.createElement('div');
+                  d.className = t.pass ? 'text-accent2' : 'text-err';
+                  d.textContent = t.msg;
+                  testsOutput.appendChild(d);
+                });
+              }
+
+              agentMsg.textContent = `Done: ${ev.status} in ${ev.tts}s`;
+
+              // Mark all agents done on success
+              if (ok) {
+                document.querySelectorAll('.agent-step div').forEach(el => {
+                  el.className = 'w-9 h-9 rounded-lg bg-accent2/20 border border-accent2 flex items-center justify-center text-accent2 text-xs font-bold';
+                });
+              }
+
+            } else if (ev.agent === 'error') {
+              addLog('Error: ' + ev.message, 'fail');
+            } else if (ev.agent === 'test_result') {
+              const pass = ev.message.includes('[PASS]');
+              testResults.push({ pass, msg: ev.message });
+              addLog(ev.message, pass ? 'pass' : 'fail');
+            } else {
+              // Agent event
+              const agentName = ev.agent;
+              if (prevAgent && prevAgent !== agentName) completeAgent(prevAgent);
+              activateAgent(agentName);
+              prevAgent = agentName;
+
+              const cleanMsg = ev.message.replace(/^[\s\S]*?\]\s*/, '');
+              agentMsg.textContent = cleanMsg;
+              addLog(ev.message, 'agent');
+            }
+          } catch(e) {}
+        }
+      }
+    } catch(err) {
+      addLog('Connection error: ' + err.message, 'fail');
+    } finally {
+      genBtn.disabled = false;
+      genBtn.innerHTML = 'Generate <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>';
     }
+  }
+
+  genBtn.addEventListener('click', handleGenerate);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); handleGenerate(); }
+  });
+
+  copyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(rawCode).then(() => {
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+    });
+  });
 })();
 </script>
-</body></html>
+</body>
+</html>
