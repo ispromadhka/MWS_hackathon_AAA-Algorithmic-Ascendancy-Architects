@@ -121,11 +121,12 @@ class LuaSandbox:
         finally:
             os.unlink(tmp_path)
 
-    def execute(self, code: str, tests: str = "") -> SandboxResult:
+    def execute(self, code: str, tests: str = "", task_text: str = "") -> SandboxResult:
         """
         Склеивает code + tests, выполняет через lua, возвращает результат.
+        task_text используется для определения нужен ли ngx mock.
         """
-        full_code = self._build_full_code(code, tests)
+        full_code = self._build_full_code(code, tests, task_text)
 
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".lua", delete=False, encoding="utf-8"
@@ -170,7 +171,7 @@ class LuaSandbox:
         finally:
             os.unlink(tmp_path)
 
-    def _build_full_code(self, code: str, tests: str) -> str:
+    def _build_full_code(self, code: str, tests: str, task_text: str = "") -> str:
         """Склеивает код и тесты с обёрткой для отлова ошибок."""
         parts = []
 
@@ -248,8 +249,10 @@ function test_summary()
 end
 """)
 
-        # Mock ngx if code uses nginx/OpenResty APIs
-        if "ngx." in code or "ngx " in code:
+        # Mock ngx ONLY if the TASK is about nginx/OpenResty (not if model mistakenly uses ngx)
+        task_lower = task_text.lower()
+        is_nginx_task = any(kw in task_lower for kw in ("nginx", "openresty", "ngx.", "apisix"))
+        if is_nginx_task:
             parts.append("""
 -- Mock ngx for standalone Lua testing
 if not ngx then

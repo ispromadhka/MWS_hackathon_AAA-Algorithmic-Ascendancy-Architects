@@ -82,7 +82,7 @@ def build_graph(
 
     def executor_node(state: AgentState) -> AgentState:
         print("\n⚡ [EXECUTOR] Running code in sandbox...")
-        result = sandbox.execute(state["draft_code"], state["tests_code"])
+        result = sandbox.execute(state["draft_code"], state["tests_code"], task_text=state["task"])
         print(f"    Result: {result.status}")
         if result.output:
             lines = result.output.strip().split("\n")

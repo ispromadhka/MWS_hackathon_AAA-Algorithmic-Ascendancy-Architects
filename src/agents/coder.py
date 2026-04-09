@@ -22,6 +22,8 @@ CRITICAL Lua rules — violating these causes instant failure:
 - Use math.floor() for integer division.
 - 'return' at module level MUST be the LAST statement.
 - nginx/OpenResty: code is a HANDLER (not standalone). Use ngx.say(), ngx.req.get_headers(), ngx.exit(). No io/print.
+- For game/simulation/Roblox tasks: NEVER use ngx.* APIs. Use print() for output, os.time() or dt accumulation for timing. Use coroutine.yield() to return control each frame — NEVER ngx.sleep() or busy-wait loops.
+- For coroutine tasks with dt: accumulate time via self.elapsed = self.elapsed + dt in update(). Check timeout OUTSIDE the coroutine. The coroutine yields each frame, update resumes it. NEVER call self:update() recursively inside a coroutine.
 
 LUA OOP RULES — YOU ARE NOT WRITING PYTHON:
 - NEVER use __init__. Lua has NO __init__. Use a .new() constructor instead.
