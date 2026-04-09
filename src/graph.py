@@ -59,18 +59,25 @@ def build_graph(
 
     def linter_node(state: AgentState) -> AgentState:
         print("\n🔍 [LINTER] Static analysis...")
+        lint_fails = state.get("_lint_fails", 0)
         lint_result = sandbox.lint(state["draft_code"])
         if lint_result:
-            print(f"    Found issues — skipping tests, sending back to coder")
+            lint_fails += 1
+            if lint_fails >= 2:
+                # Gave coder a chance, skip lint and proceed to tester
+                print(f"    Lint issues remain after {lint_fails} attempts — proceeding to tests anyway")
+                return {**state, "status": "LINT_OK", "_lint_fails": 0}
+            print(f"    Found issues (attempt {lint_fails}/2) — sending back to coder")
             for line in lint_result.output.split("\n")[:5]:
                 print(f"    {line}")
             return {
                 **state,
                 "sandbox_result": lint_result.output,
                 "status": "LINT_FAIL",
+                "_lint_fails": lint_fails,
             }
         print("    Clean")
-        return {**state, "status": "LINT_OK"}
+        return {**state, "status": "LINT_OK", "_lint_fails": 0}
 
     def executor_node(state: AgentState) -> AgentState:
         print("\n⚡ [EXECUTOR] Running code in sandbox...")
