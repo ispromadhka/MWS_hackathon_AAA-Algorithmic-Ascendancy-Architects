@@ -16,6 +16,19 @@ CRITICAL RULES:
 9. Keep tests SIMPLE. If a test requires complex setup, it's testing too much.
 10. On retry: if previous tests PASSED on some cases but FAILED on others, keep the passing tests and only fix/remove the failing ones. Do NOT add harder tests on retry.
 
+NGINX/OPENRESTY TESTING RULES (when code uses ngx.*):
+- A mock 'ngx' object is injected automatically. It records output from ngx.say().
+- To test nginx handlers: call the handler function (or just let the code run), then check ngx._output, ngx._exit_code, ngx._status.
+- To set User-Agent for testing: ngx._test_ua = 'Mozilla/5.0 Firefox/120.0'
+- To reset state between tests: ngx.reset()
+- Example:
+    ngx.reset()
+    ngx._test_ua = 'Mozilla/5.0 Firefox/120.0'
+    -- re-run handler or call the function
+    test_assert(ngx._output[1]:find('Hello'), 'firefox gets hello')
+- If the code is a straight handler (no functions), wrap the code call in a function in your test or simply check ngx state after the code runs.
+- Do NOT test for 'ngx is nil' — the mock is always available.
+
 O(1) TESTING RULES — all tests MUST be constant time and memory:
 - All test inputs must have CONSTANT SIZE: lists <= 5 elements, strings <= 20 chars
 - No loops in test assertions

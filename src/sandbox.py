@@ -200,8 +200,77 @@ function test_summary()
 end
 """)
 
-        # Пользовательский код
-        parts.append("-- User code\n" + code)
+        # Mock ngx if code uses nginx/OpenResty APIs
+        if "ngx." in code or "ngx " in code:
+            parts.append("""
+-- Mock ngx for standalone Lua testing
+if not ngx then
+    ngx = {}
+    ngx._output = {}
+    ngx._status = 200
+    ngx._headers = {}
+    ngx._exit_code = nil
+    ngx.HTTP_OK = 200
+    ngx.HTTP_FORBIDDEN = 403
+    ngx.HTTP_NOT_FOUND = 404
+    ngx.HTTP_INTERNAL_SERVER_ERROR = 500
+    ngx.WARN = 5
+    ngx.ERR = 4
+    ngx.status = 200
+    ngx.header = setmetatable({}, {
+        __newindex = function(t, k, v) ngx._headers[k] = v end,
+        __index = function(t, k) return ngx._headers[k] end,
+    })
+    ngx.var = setmetatable({}, {
+        __index = function(t, k)
+            if k == 'remote_addr' then return '127.0.0.1' end
+            if k == 'uri' then return '/' end
+            return nil
+        end
+    })
+    ngx.req = {
+        get_headers = function()
+            return { ['User-Agent'] = ngx._test_ua or 'Mozilla/5.0 (X11; Linux) Gecko/20100101 Firefox/120.0' }
+        end,
+        get_method = function() return ngx._test_method or 'GET' end,
+        get_uri_args = function() return ngx._test_args or {} end,
+        read_body = function() end,
+        get_body_data = function() return ngx._test_body or '{}' end,
+    }
+    ngx.say = function(...)
+        local args = {...}
+        for _, v in ipairs(args) do
+            table.insert(ngx._output, tostring(v))
+        end
+    end
+    ngx.print = ngx.say
+    ngx.exit = function(code) ngx._exit_code = code end
+    ngx.log = function() end
+    ngx.now = function() return os.time() end
+    ngx.shared = setmetatable({}, {
+        __index = function() return { get=function() end, set=function() end, incr=function() end } end
+    })
+    -- Helper for tests to get output
+    function ngx.get_output() return table.concat(ngx._output, '\\n') end
+    function ngx.reset()
+        ngx._output = {}
+        ngx._status = 200
+        ngx._headers = {}
+        ngx._exit_code = nil
+    end
+end
+""")
+
+        # User code — strip trailing 'return X' to allow tests to follow
+        user_code = code
+        if tests.strip():
+            # Remove trailing return statement so tests can be appended
+            lines = user_code.rstrip().split("\n")
+            while lines and lines[-1].strip().startswith("return "):
+                lines.pop()
+            user_code = "\n".join(lines)
+
+        parts.append("-- User code\n" + user_code)
 
         # Тесты
         if tests.strip():
