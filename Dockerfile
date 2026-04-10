@@ -1,50 +1,33 @@
-FROM nvidia/cuda:12.4.1-devel-ubuntu22.04 AS gpu
-FROM ubuntu:22.04 AS cpu
+FROM python:3.11-slim
 
-# Use GPU stage by default (override with --target cpu for CPU-only)
-FROM gpu
-
-ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
+ENV DEBIAN_FRONTEND=noninteractive
 
-# System deps
+# Lua + build tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 python3-pip python3-venv python3-dev \
     lua5.4 \
-    build-essential cmake git \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Python deps
+# Python deps (no CUDA needed — LLM runs in Ollama container)
 COPY requirements.txt .
-RUN pip3 install --no-cache-dir --upgrade pip && \
-    pip3 install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cu124 && \
-    pip3 install --no-cache-dir -r requirements.txt && \
-    pip3 install --no-cache-dir huggingface-hub
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
-# Build llama-cpp-python with CUDA
-RUN CMAKE_ARGS="-DGGML_CUDA=on" \
-    pip3 install --no-cache-dir llama-cpp-python
-
-# Copy source
+# Source code
 COPY src/ src/
 COPY ui/ ui/
 COPY data/ data/
 COPY main.py .
-COPY download_model.py .
 
-# Build FAISS index (embedding model auto-downloaded)
-RUN python3 -c "from src.rag_engine import RAGEngine; rag = RAGEngine(); rag.build_index(); print(f'Index built: {len(rag.entries)} entries')"
-
-# Model directory
-RUN mkdir -p models
-VOLUME /app/models
+# Build FAISS index at build time
+RUN python -c "from src.rag_engine import RAGEngine; rag = RAGEngine(); rag.build_index(); print(f'Index built: {len(rag.entries)} entries')"
 
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s \
-    CMD python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')" || exit 1
 
-ENTRYPOINT ["python3", "main.py"]
-CMD ["server", "--port", "8080", "--lua-binary", "lua5.4"]
+ENTRYPOINT ["python", "main.py"]
+CMD ["server", "--port", "8080", "--ollama-host", "http://ollama:11434"]

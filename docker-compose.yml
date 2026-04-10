@@ -1,13 +1,12 @@
 services:
-  # === DEFAULT: GPU server with Web UI ===
-  app:
-    build: .
-    container_name: local-script
+  # Ollama — LLM inference server (GPU)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
     ports:
-      - "8080:8080"
+      - "11434:11434"
     volumes:
-      - ./models:/app/models
-      - ./data:/app/data
+      - ollama_data:/root/.ollama
     deploy:
       resources:
         reservations:
@@ -17,27 +16,33 @@ services:
               capabilities: [gpu]
     restart: unless-stopped
 
-  # === CPU-only (no GPU required) ===
-  app-cpu:
-    build:
-      context: .
-      dockerfile: Dockerfile.cpu
-    container_name: local-script-cpu
+  # Pull the model (run once after first start)
+  ollama-pull:
+    image: ollama/ollama:latest
+    container_name: ollama-pull
+    depends_on:
+      - ollama
+    entrypoint: >
+      sh -c "sleep 5 && ollama pull qwen2.5-coder:7b-instruct-q4_K_M"
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    profiles:
+      - setup
+
+  # LocalScript app (CPU only — LLM is in Ollama)
+  app:
+    build: .
+    container_name: local-script
+    depends_on:
+      - ollama
     ports:
       - "8080:8080"
     volumes:
-      - ./models:/app/models
       - ./data:/app/data
-    profiles:
-      - cpu
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_MODEL=qwen2.5-coder:7b-instruct-q4_K_M
     restart: unless-stopped
 
-  # === Download model (run once) ===
-  download:
-    build: .
-    container_name: local-script-download
-    volumes:
-      - ./models:/app/models
-    entrypoint: ["python3", "download_model.py"]
-    profiles:
-      - setup
+volumes:
+  ollama_data:

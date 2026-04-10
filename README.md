@@ -4,55 +4,41 @@ Multi-agent system for automated Lua code generation, testing, and validation. U
 
 ---
 
-## Quick Start (Docker) — 3 commands
+## Quick Start (Docker) — one command
 
-### With GPU (NVIDIA)
+### Prerequisites
+
+- Docker with Compose v2+
+- NVIDIA driver + [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
+- GPU with **8 GB VRAM** (tested on RTX 3060/4060/V100)
+- Disk: ~10 GB (images + model)
+
+### Launch
 
 ```bash
 # 1. Clone and enter
 git clone <repo-url> && cd <repo-name>
 
-# 2. Download the model (~5 GB, one-time)
-docker compose --profile setup run download
+# 2. Start everything (Ollama + App)
+docker compose up -d
 
-# 3. Start the server
-docker compose up app
+# 3. Pull the model (one-time, ~4.7 GB)
+docker compose --profile setup run ollama-pull
 ```
 
 Open **http://localhost:8080** in your browser.
 
-### Without GPU (CPU-only, slower)
+### Ollama model info
 
-```bash
-# 1. Clone and enter
-git clone <repo-url> && cd <repo-name>
-
-# 2. Download the smaller model (~4.7 GB, one-time)
-docker compose --profile setup run download -- --q4
-
-# 3. Start CPU server
-docker compose --profile cpu up app-cpu
+```
+ollama pull qwen2.5-coder:7b-instruct-q4_K_M
 ```
 
-### Manual model download (if Docker download fails)
-
-Download the model manually from HuggingFace and place in `models/`:
-
-```bash
-# Option A: Q5 (recommended, 5.4 GB)
-wget https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct-GGUF/resolve/main/qwen2.5-coder-7b-instruct-q5_k_m.gguf -P models/
-
-# Option B: Q4 (smaller, 4.7 GB)
-wget https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct-GGUF/resolve/main/qwen2.5-coder-7b-instruct-q4_k_m.gguf -P models/
-```
-
-### Requirements
-
-- Docker with Compose v2+
-- For GPU: NVIDIA driver + nvidia-container-toolkit
-- For CPU: no special requirements (slower inference ~30-60s per task)
-- Disk: ~10 GB (image + model)
-- RAM: 8 GB minimum, 16 GB recommended
+Параметры запуска (соответствуют требованиям):
+- `num_ctx=4096`
+- `num_predict=256`
+- `batch=1`, `parallel=1`
+- Peak VRAM: **< 8.0 GB**
 
 ---
 

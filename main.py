@@ -1,4 +1,4 @@
-"""LocalScript — CLI/FastAPI точка входа для системы агентов."""
+"""LocalScript — CLI/FastAPI точка входа для системы агентов (Ollama backend)."""
 
 import argparse
 import json
@@ -12,21 +12,30 @@ from src.experience_bank import ExperienceBank
 from src.graph import run_task
 
 
-def run_cli(args):
-    """CLI режим — решает одну задачу."""
-    print("Initializing components...")
-
+def _init_components(args):
+    """Создаёт все компоненты системы."""
     llm = LLMEngine(
-        model_path=args.model_path,
+        model=args.model,
+        ollama_base=args.ollama_host,
         n_ctx=args.ctx_size,
-        n_gpu_layers=args.gpu_layers,
     )
     rag = RAGEngine()
     sandbox = LuaSandbox(timeout=args.timeout, lua_binary=args.lua_binary)
     exp_bank = ExperienceBank(rag_engine=rag)
 
     if not sandbox.check_lua_available():
-        print(f"WARNING: Lua binary '{args.lua_binary}' not found. Tests will fail.")
+        print(f"WARNING: Lua binary not found. Tests will fail.")
+
+    if not llm.check_model_available():
+        print(f"WARNING: Model '{args.model}' not found in Ollama. Run: ollama pull {args.model}")
+
+    return llm, rag, sandbox, exp_bank
+
+
+def run_cli(args):
+    """CLI режим — решает одну задачу."""
+    print("Initializing components...")
+    llm, rag, sandbox, exp_bank = _init_components(args)
 
     if args.task:
         result = run_task(args.task, llm, rag, sandbox, exp_bank)
@@ -49,33 +58,25 @@ def run_cli(args):
 
 
 def run_server(args):
-    """FastAPI HTTP сервер с UI."""
+    """FastAPI HTTP сервер с UI и SSE streaming."""
     import uvicorn
     import queue
     import threading
     from pathlib import Path
-    from contextlib import redirect_stdout
-    from io import StringIO
     from fastapi import FastAPI
     from fastapi.staticfiles import StaticFiles
     from fastapi.responses import HTMLResponse, StreamingResponse
+    from fastapi.middleware.cors import CORSMiddleware
     from pydantic import BaseModel
 
-    app = FastAPI(title="LocalScript Agent")
+    app = FastAPI(title="LocalScript Agent", version="1.0.0")
+    app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-    # Serve UI static files
     ui_dir = Path(__file__).parent / "ui"
     if ui_dir.exists():
         app.mount("/ui", StaticFiles(directory=str(ui_dir), html=True), name="ui")
 
-    llm = LLMEngine(
-        model_path=args.model_path,
-        n_ctx=args.ctx_size,
-        n_gpu_layers=args.gpu_layers,
-    )
-    rag = RAGEngine()
-    sandbox = LuaSandbox(timeout=args.timeout, lua_binary=args.lua_binary)
-    exp_bank = ExperienceBank(rag_engine=rag)
+    llm, rag, sandbox, exp_bank = _init_components(args)
 
     class TaskRequest(BaseModel):
         task: str
@@ -92,7 +93,7 @@ def run_server(args):
         html_path = ui_dir / "code.html"
         if html_path.exists():
             return html_path.read_text(encoding="utf-8")
-        return "<h1>UI not found. Place code.html in ui/ directory.</h1>"
+        return "<h1>UI not found</h1>"
 
     @app.post("/solve", response_model=TaskResponse)
     def solve(req: TaskRequest):
@@ -114,13 +115,11 @@ def run_server(args):
         event_queue = queue.Queue()
 
         def _capture_and_run():
-            """Runs the graph, captures print output as SSE events."""
             import builtins
             original_print = builtins.print
 
             def hooked_print(*a, **kw):
                 msg = " ".join(str(x) for x in a)
-                # Parse agent events from print output
                 if "[RAG]" in msg:
                     event_queue.put({"agent": "rag", "message": msg.strip()})
                 elif "[PLANNER]" in msg:
@@ -139,8 +138,6 @@ def run_server(args):
                     event_queue.put({"agent": "test_result", "message": msg.strip()})
                 elif "RESULT:" in msg:
                     event_queue.put({"agent": "result", "message": msg.strip()})
-                elif "TTS:" in msg:
-                    event_queue.put({"agent": "tts", "message": msg.strip()})
                 elif msg.strip():
                     event_queue.put({"agent": "system", "message": msg.strip()})
                 original_print(*a, **kw)
@@ -163,7 +160,7 @@ def run_server(args):
                 event_queue.put({"agent": "error", "message": str(e)})
             finally:
                 builtins.print = original_print
-                event_queue.put(None)  # sentinel
+                event_queue.put(None)
 
         def _event_generator():
             thread = threading.Thread(target=_capture_and_run, daemon=True)
@@ -189,6 +186,8 @@ def run_server(args):
     def health():
         return {
             "status": "ok",
+            "model": llm.model,
+            "model_available": llm.check_model_available(),
             "lua_available": sandbox.check_lua_available(),
             "rag_entries": len(rag.entries),
         }
@@ -199,26 +198,12 @@ def run_server(args):
 def run_evaluate(args):
     """Оценка системы по датасету задач."""
     print("Initializing for evaluation...")
-
-    llm = LLMEngine(
-        model_path=args.model_path,
-        n_ctx=args.ctx_size,
-        n_gpu_layers=args.gpu_layers,
-    )
-    rag = RAGEngine()
-    sandbox = LuaSandbox(timeout=args.timeout, lua_binary=args.lua_binary)
-    exp_bank = ExperienceBank(rag_engine=rag)
+    llm, rag, sandbox, exp_bank = _init_components(args)
 
     with open(args.eval_file, "r", encoding="utf-8") as f:
         tasks = json.load(f)
 
-    results = {
-        "total": len(tasks),
-        "pass_at_1": 0,
-        "pass_at_3": 0,
-        "total_tts": 0.0,
-        "details": [],
-    }
+    results = {"total": len(tasks), "pass_at_1": 0, "pass_at_3": 0, "total_tts": 0.0, "details": []}
 
     for i, task_obj in enumerate(tasks):
         task_text = task_obj if isinstance(task_obj, str) else task_obj.get("task", "")
@@ -228,34 +213,22 @@ def run_evaluate(args):
         result = run_task(task_text, llm, rag, sandbox, exp_bank)
         elapsed = time.time() - start
 
-        detail = {
-            "task": task_text,
-            "status": result["status"],
-            "iterations": result["iterations"],
-            "tts": elapsed,
-        }
-
+        detail = {"task": task_text, "status": result["status"], "iterations": result["iterations"], "tts": elapsed}
         if result["status"] == "SUCCESS":
             results["pass_at_3"] += 1
             if result["iterations"] <= 1:
                 results["pass_at_1"] += 1
             results["total_tts"] += elapsed
-
         results["details"].append(detail)
 
-    # Итоги
     total = results["total"]
-    print(f"\n{'='*60}")
-    print(f"EVALUATION RESULTS")
-    print(f"{'='*60}")
+    print(f"\n{'='*60}\nEVALUATION RESULTS\n{'='*60}")
     print(f"Pass@1: {results['pass_at_1']}/{total} ({results['pass_at_1']/total*100:.1f}%)")
     print(f"Pass@3: {results['pass_at_3']}/{total} ({results['pass_at_3']/total*100:.1f}%)")
     if results["pass_at_3"] > 0:
-        avg_tts = results["total_tts"] / results["pass_at_3"]
-        print(f"Avg TTS (successful): {avg_tts:.1f}s")
+        print(f"Avg TTS: {results['total_tts'] / results['pass_at_3']:.1f}s")
     print(f"{'='*60}")
 
-    # Сохраняем результаты
     out_path = args.eval_output or "eval_results.json"
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
@@ -263,33 +236,31 @@ def run_evaluate(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="LocalScript — LLM Agent System for Lua")
+    parser = argparse.ArgumentParser(description="LocalScript — LLM Agent System for Lua (Ollama)")
 
-    # Общие параметры
-    parser.add_argument("--model-path", default=None, help="Path to GGUF model")
-    parser.add_argument("--ctx-size", type=int, default=8192, help="Context window size")
-    parser.add_argument("--gpu-layers", type=int, default=-1, help="GPU layers (-1 = all)")
+    # Ollama params
+    parser.add_argument("--model", default="qwen2.5-coder:7b-instruct-q4_K_M", help="Ollama model tag")
+    parser.add_argument("--ollama-host", default="http://localhost:11434", help="Ollama API URL")
+    parser.add_argument("--ctx-size", type=int, default=4096, help="Context window (num_ctx)")
+
+    # Sandbox params
     parser.add_argument("--timeout", type=int, default=3, help="Lua sandbox timeout (seconds)")
     parser.add_argument("--lua-binary", default="lua", help="Path to lua binary")
 
     subparsers = parser.add_subparsers(dest="command")
 
-    # CLI
     cli_parser = subparsers.add_parser("solve", help="Solve a single task")
     cli_parser.add_argument("--task", type=str, help="Task description")
     cli_parser.add_argument("--interactive", "-i", action="store_true", help="Interactive mode")
 
-    # Server
     server_parser = subparsers.add_parser("server", help="Start FastAPI server")
     server_parser.add_argument("--port", type=int, default=8080, help="Server port")
 
-    # Evaluate
     eval_parser = subparsers.add_parser("evaluate", help="Evaluate on dataset")
     eval_parser.add_argument("--eval-file", required=True, help="JSON file with tasks")
     eval_parser.add_argument("--eval-output", default=None, help="Output JSON path")
 
-    # Build RAG index
-    rag_parser = subparsers.add_parser("build-rag", help="Build FAISS index from knowledge_base.json")
+    subparsers.add_parser("build-rag", help="Build FAISS index from knowledge_base.json")
 
     args = parser.parse_args()
 
