@@ -40,6 +40,12 @@ class RAGEngine:
     def _load_knowledge_base(self):
         with open(self.kb_path, "r", encoding="utf-8") as f:
             self.entries = json.load(f)
+        # Also load MWS-specific patterns if available
+        mws_path = self.kb_path.parent / "mws_patterns.json"
+        if mws_path.exists():
+            with open(mws_path, "r", encoding="utf-8") as f:
+                mws_entries = json.load(f)
+                self.entries.extend(mws_entries)
 
     def _load_index(self):
         self.index = faiss.read_index(str(self.index_path))

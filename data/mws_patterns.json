@@ -1,0 +1,50 @@
+[
+  {
+    "task_type": "mws_array_access",
+    "description": "Get last element of array from wf.vars",
+    "best_practice_code": "return wf.vars.emails[#wf.vars.emails]",
+    "prewritten_tests": "wf = {vars = {emails = {'a@test.com', 'b@test.com', 'c@test.com'}}}\ntest_assert_eq(wf.vars.emails[#wf.vars.emails], 'c@test.com', 'last element')"
+  },
+  {
+    "task_type": "mws_counter",
+    "description": "Increment a counter variable in wf.vars",
+    "best_practice_code": "return wf.vars.try_count_n + 1",
+    "prewritten_tests": "wf = {vars = {try_count_n = 3}}\ntest_assert_eq(wf.vars.try_count_n + 1, 4, 'increment counter')"
+  },
+  {
+    "task_type": "mws_clean_fields",
+    "description": "Remove specific fields (ID, ENTITY_ID, CALL) from array of objects in wf.vars",
+    "best_practice_code": "result = wf.vars.RESTbody.result\n\nfor _, filteredEntry in pairs(result) do\n    for key, value in pairs(filteredEntry) do\n        if key ~= \"ID\" and key ~= \"ENTITY_ID\" and key ~= \"CALL\" then\n            filteredEntry[key] = nil\n        end\n    end\nend\n\nreturn result",
+    "prewritten_tests": "wf = {vars = {RESTbody = {result = {{ID=1, ENTITY_ID=2, CALL='x', OTHER='keep'}}}}}\nresult = wf.vars.RESTbody.result\nfor _, e in pairs(result) do for k,v in pairs(e) do if k ~= 'ID' and k ~= 'ENTITY_ID' and k ~= 'CALL' then e[k] = nil end end end\ntest_assert_eq(result[1].OTHER, nil, 'OTHER removed')\ntest_assert_eq(result[1].ID, 1, 'ID kept')"
+  },
+  {
+    "task_type": "mws_date_iso8601",
+    "description": "Convert YYYYMMDD and HHMMSS to ISO 8601 format string",
+    "best_practice_code": "DATUM = wf.vars.json.IDOC.ZCDF_HEAD.DATUM\nTIME = wf.vars.json.IDOC.ZCDF_HEAD.TIME\n\nlocal function safe_sub(str, start, finish)\n    local s = string.sub(str, start, math.min(finish, #str))\n    return s ~= \"\" and s or \"00\"\nend\n\nyear = safe_sub(DATUM, 1, 4)\nmonth = safe_sub(DATUM, 5, 6)\nday = safe_sub(DATUM, 7, 8)\nhour = safe_sub(TIME, 1, 2)\nminute = safe_sub(TIME, 3, 4)\nsecond = safe_sub(TIME, 5, 6)\n\niso_date = string.format(\n    '%s-%s-%sT%s:%s:%s.00000Z',\n    year, month, day,\n    hour, minute, second\n)\n\nreturn iso_date",
+    "prewritten_tests": "wf = {vars = {json = {IDOC = {ZCDF_HEAD = {DATUM = '20231015', TIME = '153000'}}}}}\nlocal function safe_sub(str, s, f) local r = string.sub(str, s, math.min(f, #str)) return r ~= '' and r or '00' end\nlocal d = wf.vars.json.IDOC.ZCDF_HEAD.DATUM\ntest_assert_eq(safe_sub(d,1,4), '2023', 'year')\ntest_assert_eq(safe_sub(d,5,6), '10', 'month')"
+  },
+  {
+    "task_type": "mws_type_check",
+    "description": "Ensure items field in array objects is always an array (wrap single objects in array)",
+    "best_practice_code": "function ensureArray(t)\n    if type(t) ~= \"table\" then\n        return {t}\n    end\n    local isArray = true\n    for k, v in pairs(t) do\n        if type(k) ~= \"number\" or math.floor(k) ~= k then\n            isArray = false\n            break\n        end\n    end\n    return isArray and t or {t}\nend\n\nfunction ensureAllItemsAreArrays(objectsArray)\n    if type(objectsArray) ~= \"table\" then\n        return objectsArray\n    end\n    for _, obj in ipairs(objectsArray) do\n        if type(obj) == \"table\" and obj.items then\n            obj.items = ensureArray(obj.items)\n        end\n    end\n    return objectsArray\nend\n\nreturn ensureAllItemsAreArrays(wf.vars.json.IDOC.ZCDF_HEAD.ZCDF_PACKAGES)",
+    "prewritten_tests": "wf = {vars = {json = {IDOC = {ZCDF_HEAD = {ZCDF_PACKAGES = {{items = {sku='C'}}, {items = {{sku='A'},{sku='B'}}}}}}}}}\nfunction ensureArray(t) if type(t) ~= 'table' then return {t} end local a=true for k,v in pairs(t) do if type(k)~='number' or math.floor(k)~=k then a=false break end end return a and t or {t} end\nlocal r = wf.vars.json.IDOC.ZCDF_HEAD.ZCDF_PACKAGES\nfor _,o in ipairs(r) do if type(o)=='table' and o.items then o.items=ensureArray(o.items) end end\ntest_assert_eq(type(r[1].items), 'table', 'items is table')\ntest_assert_eq(r[1].items[1].sku, 'C', 'wrapped single item')"
+  },
+  {
+    "task_type": "mws_filter_array",
+    "description": "Filter array elements keeping only those with non-empty Discount or Markdown fields",
+    "best_practice_code": "local result = _utils.array.new()\nlocal items = wf.vars.parsedCsv\n\nfor _, item in ipairs(items) do\n    if (item.Discount ~= \"\" and item.Discount ~= nil) or (item.Markdown ~= \"\" and item.Markdown ~= nil) then\n        table.insert(result, item)\n    end\nend\n\nreturn result",
+    "prewritten_tests": "-- Mock _utils\n_utils = {array = {new = function() return {} end}}\nwf = {vars = {parsedCsv = {\n    {SKU='A001', Discount='10%', Markdown=''},\n    {SKU='A002', Discount='', Markdown='5%'},\n    {SKU='A003', Discount=nil, Markdown=nil},\n    {SKU='A004', Discount='', Markdown=''}\n}}}\nlocal result = {}\nfor _, item in ipairs(wf.vars.parsedCsv) do\n    if (item.Discount ~= '' and item.Discount ~= nil) or (item.Markdown ~= '' and item.Markdown ~= nil) then table.insert(result, item) end\nend\ntest_assert_eq(#result, 2, 'filtered to 2 items')\ntest_assert_eq(result[1].SKU, 'A001', 'first has discount')"
+  },
+  {
+    "task_type": "mws_add_variable",
+    "description": "Add new computed variable (e.g. squared number) to workflow output",
+    "best_practice_code": "local n = tonumber('5')\nreturn n * n",
+    "prewritten_tests": "test_assert_eq(tonumber('5') * tonumber('5'), 25, 'squared')\ntest_assert_eq(tonumber('3') * tonumber('3'), 9, 'squared 3')"
+  },
+  {
+    "task_type": "mws_time_conversion",
+    "description": "Convert ISO 8601 datetime string to Unix epoch seconds",
+    "best_practice_code": "local iso_time = wf.initVariables.recallTime\nlocal days_in_month = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}\n\nif not iso_time or not iso_time:match(\"^%d%d%d%d%-%d%d%-%d%dT\") then\n    return nil\nend\n\nlocal function is_leap_year(year)\n    return (year % 4 == 0 and year % 100 ~= 0) or (year % 400 == 0)\nend\n\nlocal function days_since_epoch(year, month, day)\n    local days = 0\n    for y = 1970, year - 1 do\n        days = days + (is_leap_year(y) and 366 or 365)\n    end\n    for m = 1, month - 1 do\n        days = days + days_in_month[m]\n        if m == 2 and is_leap_year(year) then\n            days = days + 1\n        end\n    end\n    days = days + (day - 1)\n    return days\nend\n\nlocal year, month, day, hour, min, sec, offset_sign, offset_hour, offset_min =\n    iso_time:match(\"(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)([+-])(%d+):(%d+)\")\n\nif not year then return nil end\n\nyear = tonumber(year)\nmonth = tonumber(month)\nday = tonumber(day)\nhour = tonumber(hour)\nmin = tonumber(min)\nsec = tonumber(sec)\noffset_hour = tonumber(offset_hour)\noffset_min = tonumber(offset_min)\n\nlocal total_days = days_since_epoch(year, month, day)\nlocal total_seconds = total_days * 86400 + hour * 3600 + min * 60 + sec\nlocal offset_seconds = offset_hour * 3600 + offset_min * 60\n\nif offset_sign == \"-\" then\n    offset_seconds = -offset_seconds\nend\n\nreturn total_seconds - offset_seconds",
+    "prewritten_tests": "-- Simple validation of date parsing logic\nlocal function is_leap(y) return (y%4==0 and y%100~=0) or (y%400==0) end\ntest_assert(is_leap(2000), 'leap 2000')\ntest_assert(not is_leap(1900), 'not leap 1900')\ntest_assert(is_leap(2024), 'leap 2024')"
+  }
+]

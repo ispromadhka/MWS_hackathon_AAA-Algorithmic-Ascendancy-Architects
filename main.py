@@ -95,6 +95,19 @@ def run_server(args):
             return html_path.read_text(encoding="utf-8")
         return "<h1>UI not found</h1>"
 
+    class GenerateRequest(BaseModel):
+        prompt: str
+
+    class GenerateResponse(BaseModel):
+        code: str
+
+    @app.post("/generate", response_model=GenerateResponse)
+    def generate(req: GenerateRequest):
+        """OpenAPI contract: POST /generate {prompt} -> {code}"""
+        result = run_task(req.prompt, llm, rag, sandbox, exp_bank)
+        code = result.get("draft_code", "")
+        return GenerateResponse(code=code)
+
     @app.post("/solve", response_model=TaskResponse)
     def solve(req: TaskRequest):
         result = run_task(req.task, llm, rag, sandbox, exp_bank)
