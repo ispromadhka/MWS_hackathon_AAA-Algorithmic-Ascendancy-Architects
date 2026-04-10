@@ -2,6 +2,60 @@
 
 Multi-agent system for automated Lua code generation, testing, and validation. Uses a local 7B LLM with Dynamic Few-Shot RAG, sandboxed execution, and self-repair loops.
 
+---
+
+## Quick Start (Docker) — 3 commands
+
+### With GPU (NVIDIA)
+
+```bash
+# 1. Clone and enter
+git clone <repo-url> && cd <repo-name>
+
+# 2. Download the model (~5 GB, one-time)
+docker compose --profile setup run download
+
+# 3. Start the server
+docker compose up app
+```
+
+Open **http://localhost:8080** in your browser.
+
+### Without GPU (CPU-only, slower)
+
+```bash
+# 1. Clone and enter
+git clone <repo-url> && cd <repo-name>
+
+# 2. Download the smaller model (~4.7 GB, one-time)
+docker compose --profile setup run download -- --q4
+
+# 3. Start CPU server
+docker compose --profile cpu up app-cpu
+```
+
+### Manual model download (if Docker download fails)
+
+Download the model manually from HuggingFace and place in `models/`:
+
+```bash
+# Option A: Q5 (recommended, 5.4 GB)
+wget https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct-GGUF/resolve/main/qwen2.5-coder-7b-instruct-q5_k_m.gguf -P models/
+
+# Option B: Q4 (smaller, 4.7 GB)
+wget https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct-GGUF/resolve/main/qwen2.5-coder-7b-instruct-q4_k_m.gguf -P models/
+```
+
+### Requirements
+
+- Docker with Compose v2+
+- For GPU: NVIDIA driver + nvidia-container-toolkit
+- For CPU: no special requirements (slower inference ~30-60s per task)
+- Disk: ~10 GB (image + model)
+- RAM: 8 GB minimum, 16 GB recommended
+
+---
+
 ## Architecture
 
 ```
