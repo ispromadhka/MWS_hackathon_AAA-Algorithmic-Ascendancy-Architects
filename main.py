@@ -100,11 +100,17 @@ def run_server(args):
 
     class GenerateResponse(BaseModel):
         code: str
+        clarification: str | None = None
 
     @app.post("/generate", response_model=GenerateResponse)
     def generate(req: GenerateRequest):
         """OpenAPI contract: POST /generate {prompt} -> {code}"""
         result = run_task(req.prompt, llm, rag, sandbox, exp_bank)
+        if result.get("status") == "NEEDS_CLARIFICATION":
+            return GenerateResponse(
+                code="",
+                clarification=result.get("clarification_question", ""),
+            )
         code = result.get("draft_code", "")
         return GenerateResponse(code=code)
 

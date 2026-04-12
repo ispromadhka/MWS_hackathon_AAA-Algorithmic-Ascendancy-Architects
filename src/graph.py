@@ -8,6 +8,8 @@ from src.llm_engine import LLMEngine
 from src.rag_engine import RAGEngine
 from src.sandbox import LuaSandbox
 from src.experience_bank import ExperienceBank
+from src.agents.translator import node_translator
+from src.agents.clarifier import node_clarifier
 from src.agents.planner import node_planner
 from src.agents.coder import node_coder
 from src.agents.tester import node_tester
@@ -16,6 +18,8 @@ from src.agents.critic import node_critic, route_after_critic
 
 class AgentState(TypedDict):
     task: str
+    original_task: str      # оригинал до перевода
+    clarification_question: str  # вопрос уточнения (если нужен)
     memory_md: str          # план от Planner
     rag_context: str        # контекст из FAISS
     experience_hints: str   # инсайты из experience bank
@@ -24,7 +28,7 @@ class AgentState(TypedDict):
     sandbox_result: str     # результат выполнения
     iterations: int         # счётчик Fast Loop
     slow_iterations: int    # счётчик Slow Loop
-    status: str             # SUCCESS, NEED_FIX, NEED_NEW_PLAN, GIVE_UP
+    status: str             # SUCCESS, NEED_FIX, NEED_NEW_PLAN, GIVE_UP, NEEDS_CLARIFICATION
     lint_fails: int         # счётчик lint failures
     time_started: float     # для замера TTS
     time_finished: float
@@ -58,15 +62,23 @@ def build_graph(
         print(f"    Tests generated ({len(result['tests_code'])} chars)")
         return result
 
+    def translator_node(state: AgentState) -> AgentState:
+        return node_translator(state, llm)
+
+    def clarifier_node(state: AgentState) -> AgentState:
+        return node_clarifier(state, llm)
+
     def linter_node(state: AgentState) -> AgentState:
-        print("\n🔍 [LINTER] Static analysis...")
+        """Lints combined code+tests AFTER tester, BEFORE executor."""
+        print("\n🔍 [LINTER] Static analysis (code + tests)...")
         lint_fails = state.get("lint_fails", 0)
-        lint_result = sandbox.lint(state["draft_code"])
+        # Lint the combined code that will actually run in sandbox
+        combined = state.get("draft_code", "") + "\n" + state.get("tests_code", "")
+        lint_result = sandbox.lint(combined)
         if lint_result:
             lint_fails += 1
             if lint_fails >= 2:
-                # Gave coder a chance, skip lint and proceed to tester
-                print(f"    Lint issues remain after {lint_fails} attempts — proceeding to tests anyway")
+                print(f"    Lint issues remain after {lint_fails} attempts — proceeding anyway")
                 return {**state, "status": "LINT_OK", "lint_fails": 0}
             print(f"    Found issues (attempt {lint_fails}/2) — sending back to coder")
             for line in lint_result.output.split("\n")[:5]:
@@ -146,48 +158,52 @@ def build_graph(
     # Сборка графа
     graph = StateGraph(AgentState)
 
+    def route_after_clarifier(state: AgentState) -> str:
+        if state.get("status") == "NEEDS_CLARIFICATION":
+            return "end"  # Return question to user
+        return "planner"  # Clear, proceed
+
     def route_after_linter(state: AgentState) -> str:
         if state["status"] == "LINT_FAIL":
-            return "coder"  # Send back to coder with lint errors
-        return "tester"  # Lint OK, proceed to tests
+            return "coder"  # Lint failed on code+tests, fix code
+        return "executor"  # Clean, proceed to execution
 
+    # Register all nodes
+    graph.add_node("translator", translator_node)
     graph.add_node("rag", rag_node)
+    graph.add_node("clarifier", clarifier_node)
     graph.add_node("planner", planner_node)
     graph.add_node("coder", coder_node)
-    graph.add_node("linter", linter_node)
     graph.add_node("tester", tester_node)
+    graph.add_node("linter", linter_node)
     graph.add_node("executor", executor_node)
     graph.add_node("critic", critic_node)
 
-    # Связи
-    graph.set_entry_point("rag")
-    graph.add_edge("rag", "planner")
+    # Flow: translator → rag → clarifier → [planner | END]
+    graph.set_entry_point("translator")
+    graph.add_edge("translator", "rag")
+    graph.add_edge("rag", "clarifier")
+    graph.add_conditional_edges("clarifier", route_after_clarifier, {
+        "planner": "planner",
+        "end": END,
+    })
+
+    # Flow: planner → coder → tester → linter(code+tests) → [executor | coder]
     graph.add_edge("planner", "coder")
-    graph.add_edge("coder", "linter")
+    graph.add_edge("coder", "tester")
+    graph.add_edge("tester", "linter")
+    graph.add_conditional_edges("linter", route_after_linter, {
+        "coder": "coder",
+        "executor": "executor",
+    })
 
-    # Linter: if lint fails -> back to coder, else -> tester
-    graph.add_conditional_edges(
-        "linter",
-        route_after_linter,
-        {
-            "coder": "coder",
-            "tester": "tester",
-        },
-    )
-
-    graph.add_edge("tester", "executor")
+    # Flow: executor → critic → [END | coder | planner]
     graph.add_edge("executor", "critic")
-
-    # Условный переход после critic
-    graph.add_conditional_edges(
-        "critic",
-        route_after_critic,
-        {
-            "end": END,
-            "coder": "coder",
-            "planner": "planner",
-        },
-    )
+    graph.add_conditional_edges("critic", route_after_critic, {
+        "end": END,
+        "coder": "coder",
+        "planner": "planner",
+    })
 
     return graph.compile()
 
@@ -204,6 +220,8 @@ def run_task(
 
     initial_state: AgentState = {
         "task": task,
+        "original_task": "",
+        "clarification_question": "",
         "memory_md": "",
         "rag_context": "",
         "experience_hints": "",

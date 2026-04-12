@@ -2,6 +2,7 @@ langgraph
 langchain-core
 faiss-cpu
 sentence-transformers
+einops
 uvicorn
 fastapi
 pydantic

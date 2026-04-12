@@ -11,7 +11,8 @@ from sentence_transformers import SentenceTransformer
 
 DEFAULT_KB_PATH = Path(__file__).resolve().parent.parent / "data" / "knowledge_base.json"
 DEFAULT_INDEX_PATH = Path(__file__).resolve().parent.parent / "data" / "faiss_index.bin"
-EMBEDDING_MODEL = "all-MiniLM-L6-v2"
+EMBEDDING_MODEL = "jinaai/jina-embeddings-v2-base-code"
+EMBEDDING_MODEL_FALLBACK = "all-MiniLM-L6-v2"
 
 
 class RAGEngine:
@@ -25,7 +26,11 @@ class RAGEngine:
     ):
         self.kb_path = Path(kb_path or DEFAULT_KB_PATH)
         self.index_path = Path(index_path or DEFAULT_INDEX_PATH)
-        self.model = SentenceTransformer(model_name, device="cpu")
+        try:
+            self.model = SentenceTransformer(model_name, trust_remote_code=True, device="cpu")
+        except Exception:
+            print(f"Failed to load {model_name}, falling back to {EMBEDDING_MODEL_FALLBACK}")
+            self.model = SentenceTransformer(EMBEDDING_MODEL_FALLBACK, device="cpu")
         self.entries: list[dict] = []
         self.index: faiss.IndexFlatIP | None = None
 
