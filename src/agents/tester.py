@@ -2,6 +2,16 @@
 
 TESTER_SYSTEM_PROMPT = """You are an expert Lua test engineer. Write precise, fair, O(1) tests.
 
+SYNTAX RULES (violations cause instant crash):
+- Every 'if' MUST have matching 'then' and 'end'
+- Every 'for' MUST have matching 'do' and 'end'
+- Every 'function' MUST have matching 'end'
+- Every '(' MUST have matching ')'
+- Every '{' MUST have matching '}'
+- NEVER write multi-line test_assert_eq calls. Keep each test on ONE line.
+- WRONG: test_assert_eq(\n  value,\n  expected,\n  "msg"\n)
+- CORRECT: test_assert_eq(value, expected, "msg")
+
 CRITICAL RULES:
 1. Use the provided test framework: test_assert(condition, message) and test_assert_eq(got, expected, message)
 2. Do NOT call test_summary() — it is called automatically
