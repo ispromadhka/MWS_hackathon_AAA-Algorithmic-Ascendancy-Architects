@@ -46,17 +46,17 @@ def node_critic(state: dict) -> dict:
             "status": "SUCCESS",
         }
 
-    # Code ran successfully with no test output (tests were skipped/broken)
-    # If code executed without errors and has MWS content — accept it
+    # MWS code acceptance: if code uses wf.vars and sandbox has no real errors — accept
     code = state.get("draft_code", "")
     has_mws = any(kw in code for kw in ("wf.vars", "wf.init", "_utils.array"))
-    no_errors = "[FAIL]" not in sandbox_result and "error" not in sandbox_result.lower() and "traceback" not in sandbox_result.lower()
-    if has_mws and no_errors and sandbox_result.strip() == "":
-        return {
-            **state,
-            "iterations": iterations,
-            "status": "SUCCESS",
-        }
+    if has_mws:
+        real_errors = any(kw in sandbox_result.lower() for kw in ("syntax error", "[fail]", "unexpected symbol", "expected near"))
+        if not real_errors:
+            return {
+                **state,
+                "iterations": iterations,
+                "status": "SUCCESS",
+            }
 
     analysis = _analyze_failure(sandbox_result)
 

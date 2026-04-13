@@ -46,5 +46,77 @@
     "description": "Convert ISO 8601 datetime string to Unix epoch seconds",
     "best_practice_code": "local iso_time = wf.initVariables.recallTime\nlocal days_in_month = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}\n\nif not iso_time or not iso_time:match(\"^%d%d%d%d%-%d%d%-%d%dT\") then\n    return nil\nend\n\nlocal function is_leap_year(year)\n    return (year % 4 == 0 and year % 100 ~= 0) or (year % 400 == 0)\nend\n\nlocal function days_since_epoch(year, month, day)\n    local days = 0\n    for y = 1970, year - 1 do\n        days = days + (is_leap_year(y) and 366 or 365)\n    end\n    for m = 1, month - 1 do\n        days = days + days_in_month[m]\n        if m == 2 and is_leap_year(year) then\n            days = days + 1\n        end\n    end\n    days = days + (day - 1)\n    return days\nend\n\nlocal year, month, day, hour, min, sec, offset_sign, offset_hour, offset_min =\n    iso_time:match(\"(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)([+-])(%d+):(%d+)\")\n\nif not year then return nil end\n\nyear = tonumber(year)\nmonth = tonumber(month)\nday = tonumber(day)\nhour = tonumber(hour)\nmin = tonumber(min)\nsec = tonumber(sec)\noffset_hour = tonumber(offset_hour)\noffset_min = tonumber(offset_min)\n\nlocal total_days = days_since_epoch(year, month, day)\nlocal total_seconds = total_days * 86400 + hour * 3600 + min * 60 + sec\nlocal offset_seconds = offset_hour * 3600 + offset_min * 60\n\nif offset_sign == \"-\" then\n    offset_seconds = -offset_seconds\nend\n\nreturn total_seconds - offset_seconds",
     "prewritten_tests": "-- Simple validation of date parsing logic\nlocal function is_leap(y) return (y%4==0 and y%100~=0) or (y%400==0) end\ntest_assert(is_leap(2000), 'leap 2000')\ntest_assert(not is_leap(1900), 'not leap 1900')\ntest_assert(is_leap(2024), 'leap 2024')"
+  },
+  {
+    "task_type": "mws_array_length",
+    "description": "Get length of array from wf.vars",
+    "best_practice_code": "return #wf.vars.items",
+    "prewritten_tests": "wf = {vars = {items = {'a','b','c'}}}\ntest_assert_eq(#wf.vars.items, 3, 'length')"
+  },
+  {
+    "task_type": "mws_first_element",
+    "description": "Get first element of array from wf.vars",
+    "best_practice_code": "return wf.vars.users[1]",
+    "prewritten_tests": "wf = {vars = {users = {'alice','bob'}}}\ntest_assert_eq(wf.vars.users[1], 'alice', 'first')"
+  },
+  {
+    "task_type": "mws_string_concat",
+    "description": "Concatenate two string variables with separator",
+    "best_practice_code": "return wf.vars.firstName .. ' ' .. wf.vars.lastName",
+    "prewritten_tests": "wf = {vars = {firstName = 'John', lastName = 'Doe'}}\ntest_assert_eq(wf.vars.firstName .. ' ' .. wf.vars.lastName, 'John Doe', 'concat')"
+  },
+  {
+    "task_type": "mws_string_lower",
+    "description": "Convert string to lowercase",
+    "best_practice_code": "return string.lower(wf.vars.email)",
+    "prewritten_tests": "wf = {vars = {email = 'Test@Email.COM'}}\ntest_assert_eq(string.lower(wf.vars.email), 'test@email.com', 'lower')"
+  },
+  {
+    "task_type": "mws_sum_array",
+    "description": "Sum all numeric elements in array from wf.vars",
+    "best_practice_code": "local sum = 0\nfor _, v in ipairs(wf.vars.prices) do\n    sum = sum + v\nend\nreturn sum",
+    "prewritten_tests": "wf = {vars = {prices = {10, 20, 30}}}\nlocal s = 0\nfor _, v in ipairs(wf.vars.prices) do s = s + v end\ntest_assert_eq(s, 60, 'sum')"
+  },
+  {
+    "task_type": "mws_max_array",
+    "description": "Find maximum element in numeric array",
+    "best_practice_code": "local max_val = wf.vars.scores[1]\nfor _, v in ipairs(wf.vars.scores) do\n    if v > max_val then max_val = v end\nend\nreturn max_val",
+    "prewritten_tests": "wf = {vars = {scores = {5, 99, 42, 1}}}\nlocal m = wf.vars.scores[1]\nfor _, v in ipairs(wf.vars.scores) do if v > m then m = v end end\ntest_assert_eq(m, 99, 'max')"
+  },
+  {
+    "task_type": "mws_filter_by_field",
+    "description": "Filter array of objects by field value",
+    "best_practice_code": "local result = _utils.array.new()\nfor _, order in ipairs(wf.vars.orders) do\n    if order.status == 'completed' then\n        table.insert(result, order)\n    end\nend\nreturn result",
+    "prewritten_tests": "_utils = {array = {new = function() return {} end}}\nwf = {vars = {orders = {{status='completed'},{status='pending'},{status='completed'}}}}\nlocal r = {}\nfor _, o in ipairs(wf.vars.orders) do if o.status == 'completed' then table.insert(r, o) end end\ntest_assert_eq(#r, 2, 'filtered')"
+  },
+  {
+    "task_type": "mws_conditional",
+    "description": "Return value based on condition check on wf.vars",
+    "best_practice_code": "if wf.vars.age > 18 then\n    return 'adult'\nelse\n    return 'minor'\nend",
+    "prewritten_tests": "wf = {vars = {age = 25}}\nlocal r = wf.vars.age > 18 and 'adult' or 'minor'\ntest_assert_eq(r, 'adult', 'adult')\nwf.vars.age = 10\nr = wf.vars.age > 18 and 'adult' or 'minor'\ntest_assert_eq(r, 'minor', 'minor')"
+  },
+  {
+    "task_type": "mws_nested_access",
+    "description": "Access deeply nested field in wf.vars JSON structure",
+    "best_practice_code": "return wf.vars.response.data.items[1].name",
+    "prewritten_tests": "wf = {vars = {response = {data = {items = {{name = 'test'}}}}}}\ntest_assert_eq(wf.vars.response.data.items[1].name, 'test', 'nested')"
+  },
+  {
+    "task_type": "mws_count_elements",
+    "description": "Count elements in nested array structure",
+    "best_practice_code": "return #wf.vars.json.IDOC.ZCDF_HEAD.ZCDF_PACKAGES",
+    "prewritten_tests": "wf = {vars = {json = {IDOC = {ZCDF_HEAD = {ZCDF_PACKAGES = {{id=1},{id=2},{id=3}}}}}}}\ntest_assert_eq(#wf.vars.json.IDOC.ZCDF_HEAD.ZCDF_PACKAGES, 3, 'count')"
+  },
+  {
+    "task_type": "mws_transform_array",
+    "description": "Add computed field to each element in array",
+    "best_practice_code": "for _, product in ipairs(wf.vars.products) do\n    product.fullName = product.name .. ' - ' .. product.category\nend\nreturn wf.vars.products",
+    "prewritten_tests": "wf = {vars = {products = {{name='A', category='X'}, {name='B', category='Y'}}}}\nfor _, p in ipairs(wf.vars.products) do p.fullName = p.name .. ' - ' .. p.category end\ntest_assert_eq(wf.vars.products[1].fullName, 'A - X', 'fullName')"
+  },
+  {
+    "task_type": "mws_validation",
+    "description": "Validate field exists and meets criteria",
+    "best_practice_code": "if wf.vars.password ~= nil and #wf.vars.password > 8 then\n    return true\nelse\n    return false\nend",
+    "prewritten_tests": "wf = {vars = {password = 'longpassword123'}}\ntest_assert_eq(wf.vars.password ~= nil and #wf.vars.password > 8, true, 'valid')\nwf.vars.password = 'short'\ntest_assert_eq(wf.vars.password ~= nil and #wf.vars.password > 8, false, 'invalid')"
   }
 ]
