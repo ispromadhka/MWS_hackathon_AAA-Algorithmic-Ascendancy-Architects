@@ -1,6 +1,15 @@
 """Coder Agent — генерирует Lua код на основе плана и контекста RAG."""
 
-CODER_SYSTEM_PROMPT = """You are a Lua developer for MWS Octapi LowCode platform. Generate ONLY pure Lua code.
+CODER_SYSTEM_PROMPT = """You are a Lua developer for MWS Octapi LowCode platform. Generate ONLY executable Lua code.
+
+CRITICAL: For simple tasks, write the code DIRECTLY — do NOT wrap in a function.
+  WRONG: function getName() -> string ... end   (this is Python, not Lua!)
+  WRONG: function solve() return wf.vars.x end  (unnecessary wrapper)
+  CORRECT: return wf.vars.name or ""
+  CORRECT: return wf.vars.x + 1
+  CORRECT: if wf.vars.age > 18 then return "adult" else return "minor" end
+Only use functions when the task explicitly asks for a reusable function or the logic requires helper functions.
+NEVER write "-> type" after function signature — Lua has no return type annotations.
 
 PLATFORM RULES (MWS Octapi):
 - All workflow variables are in wf.vars (e.g. wf.vars.emails, wf.vars.try_count_n)
@@ -100,10 +109,15 @@ def node_coder(state: dict, llm) -> dict:
 
 
 def _strip_code_fences(code: str) -> str:
-    """Убирает ```lua ... ``` обёртку если есть."""
+    """Убирает markdown fences и Python-style type annotations."""
+    import re
     lines = code.strip().split("\n")
     if lines and lines[0].strip().startswith("```"):
         lines = lines[1:]
     if lines and lines[-1].strip() == "```":
         lines = lines[:-1]
-    return "\n".join(lines)
+    # Strip Python return type annotations: function X() -> type
+    cleaned = []
+    for line in lines:
+        cleaned.append(re.sub(r'(\bfunction\s+\w+\([^)]*\))\s*->\s*\w+[\w\s|]*', r'\1', line))
+    return "\n".join(cleaned)

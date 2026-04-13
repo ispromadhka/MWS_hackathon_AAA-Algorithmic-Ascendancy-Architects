@@ -118,5 +118,143 @@
     "description": "Validate field exists and meets criteria",
     "best_practice_code": "if wf.vars.password ~= nil and #wf.vars.password > 8 then\n    return true\nelse\n    return false\nend",
     "prewritten_tests": "wf = {vars = {password = 'longpassword123'}}\ntest_assert_eq(wf.vars.password ~= nil and #wf.vars.password > 8, true, 'valid')\nwf.vars.password = 'short'\ntest_assert_eq(wf.vars.password ~= nil and #wf.vars.password > 8, false, 'invalid')"
+  },
+  {
+    "task_type": "mws_nil_fallback",
+    "description": "Return default value if wf.vars field is nil",
+    "best_practice_code": "return wf.vars.name or \"\"",
+    "prewritten_tests": "wf = {vars = {name = 'John'}}\ntest_assert_eq(wf.vars.name or '', 'John', 'exists')\nwf.vars.name = nil\ntest_assert_eq(wf.vars.name or '', '', 'nil fallback')"
+  },
+  {
+    "task_type": "mws_cart_total",
+    "description": "Calculate total cost from cart items (price * quantity)",
+    "best_practice_code": "local total = 0\nfor _, item in ipairs(wf.vars.cart) do\n    total = total + (item.price * item.quantity)\nend\nreturn total",
+    "prewritten_tests": "wf = {vars = {cart = {{price=10, quantity=2}, {price=5, quantity=3}}}}\nlocal t = 0\nfor _, i in ipairs(wf.vars.cart) do t = t + i.price * i.quantity end\ntest_assert_eq(t, 35, 'total')"
+  },
+  {
+    "task_type": "mws_date_reformat",
+    "description": "Convert date from DD.MM.YYYY to YYYY-MM-DD",
+    "best_practice_code": "local d = wf.vars.date\nlocal day, month, year = d:match('(%d+)%.(%d+)%.(%d+)')\nreturn year .. '-' .. month .. '-' .. day",
+    "prewritten_tests": "wf = {vars = {date = '25.12.2023'}}\nlocal d,m,y = wf.vars.date:match('(%d+)%.(%d+)%.(%d+)')\ntest_assert_eq(y..'-'..m..'-'..d, '2023-12-25', 'reformat')"
+  },
+  {
+    "task_type": "mws_average",
+    "description": "Calculate average of numeric array",
+    "best_practice_code": "local sum = 0\nfor _, v in ipairs(wf.vars.values) do\n    sum = sum + v\nend\nreturn sum / #wf.vars.values",
+    "prewritten_tests": "wf = {vars = {values = {10, 20, 30}}}\nlocal s = 0\nfor _, v in ipairs(wf.vars.values) do s = s + v end\ntest_assert_eq(s / #wf.vars.values, 20, 'average')"
+  },
+  {
+    "task_type": "mws_split_string",
+    "description": "Split string by delimiter into array",
+    "best_practice_code": "local result = _utils.array.new()\nfor part in wf.vars.csv:gmatch('[^,]+') do\n    table.insert(result, part)\nend\nreturn result",
+    "prewritten_tests": "_utils = {array = {new = function() return {} end}}\nwf = {vars = {csv = 'a,b,c'}}\nlocal r = {}\nfor p in wf.vars.csv:gmatch('[^,]+') do table.insert(r, p) end\ntest_assert_eq(#r, 3, 'split count')\ntest_assert_eq(r[1], 'a', 'first')"
+  },
+  {
+    "task_type": "mws_merge_arrays",
+    "description": "Merge two arrays into one",
+    "best_practice_code": "local result = _utils.array.new()\nfor _, v in ipairs(wf.vars.arr1) do\n    table.insert(result, v)\nend\nfor _, v in ipairs(wf.vars.arr2) do\n    table.insert(result, v)\nend\nreturn result",
+    "prewritten_tests": "_utils = {array = {new = function() return {} end}}\nwf = {vars = {arr1 = {1,2}, arr2 = {3,4}}}\nlocal r = {}\nfor _,v in ipairs(wf.vars.arr1) do table.insert(r,v) end\nfor _,v in ipairs(wf.vars.arr2) do table.insert(r,v) end\ntest_assert_eq(#r, 4, 'merged')"
+  },
+  {
+    "task_type": "mws_group_by",
+    "description": "Group array elements by field value",
+    "best_practice_code": "local groups = {}\nfor _, item in ipairs(wf.vars.items) do\n    local key = item.category\n    if not groups[key] then\n        groups[key] = _utils.array.new()\n    end\n    table.insert(groups[key], item)\nend\nreturn groups",
+    "prewritten_tests": "_utils = {array = {new = function() return {} end}}\nwf = {vars = {items = {{category='A',name='x'},{category='B',name='y'},{category='A',name='z'}}}}\nlocal g = {}\nfor _,i in ipairs(wf.vars.items) do if not g[i.category] then g[i.category]={} end table.insert(g[i.category],i) end\ntest_assert_eq(#g['A'], 2, 'group A')"
+  },
+  {
+    "task_type": "mws_find_by_id",
+    "description": "Find element in array by field value",
+    "best_practice_code": "for _, user in ipairs(wf.vars.users) do\n    if user.id == wf.vars.targetId then\n        return user\n    end\nend\nreturn nil",
+    "prewritten_tests": "wf = {vars = {users = {{id=1,name='A'},{id=2,name='B'}}, targetId = 2}}\nlocal found = nil\nfor _,u in ipairs(wf.vars.users) do if u.id == wf.vars.targetId then found = u break end end\ntest_assert_eq(found.name, 'B', 'found')"
+  },
+  {
+    "task_type": "mws_table_keys",
+    "description": "Get all keys of a table as an array",
+    "best_practice_code": "local keys = _utils.array.new()\nfor k, _ in pairs(wf.vars.settings) do\n    table.insert(keys, k)\nend\nreturn keys",
+    "prewritten_tests": "_utils = {array = {new = function() return {} end}}\nwf = {vars = {settings = {a=1, b=2, c=3}}}\nlocal keys = {}\nfor k,_ in pairs(wf.vars.settings) do table.insert(keys, k) end\ntest_assert_eq(#keys, 3, 'key count')"
+  },
+  {
+    "task_type": "mws_range",
+    "description": "Create array of numbers from 1 to N",
+    "best_practice_code": "local result = _utils.array.new()\nfor i = 1, wf.vars.count do\n    table.insert(result, i)\nend\nreturn result",
+    "prewritten_tests": "_utils = {array = {new = function() return {} end}}\nwf = {vars = {count = 5}}\nlocal r = {}\nfor i = 1, wf.vars.count do table.insert(r, i) end\ntest_assert_eq(#r, 5, 'count')\ntest_assert_eq(r[1], 1, 'first')\ntest_assert_eq(r[5], 5, 'last')"
+  },
+  {
+    "task_type": "mws_unique",
+    "description": "Remove duplicates from array and return unique elements",
+    "best_practice_code": "local seen = {}\nlocal result = _utils.array.new()\nfor _, v in ipairs(wf.vars.tags) do\n    if not seen[v] then\n        seen[v] = true\n        table.insert(result, v)\n    end\nend\nreturn result",
+    "prewritten_tests": "_utils = {array = {new = function() return {} end}}\nwf = {vars = {tags = {'a','b','a','c','b'}}}\nlocal seen = {}\nlocal r = {}\nfor _,v in ipairs(wf.vars.tags) do if not seen[v] then seen[v]=true table.insert(r,v) end end\ntest_assert_eq(#r, 3, 'unique count')"
+  },
+  {
+    "task_type": "mws_string_replace",
+    "description": "Replace substring in string",
+    "best_practice_code": "return string.gsub(wf.vars.text, 'old', 'new', 1)",
+    "prewritten_tests": "wf = {vars = {text = 'the old house is old'}}\nlocal r = string.gsub(wf.vars.text, 'old', 'new', 1)\ntest_assert_eq(r, 'the new house is old', 'replace first')"
+  },
+  {
+    "task_type": "mws_extract_domain",
+    "description": "Extract domain from email address (part after @)",
+    "best_practice_code": "return wf.vars.email:match('@(.+)$') or ''",
+    "prewritten_tests": "wf = {vars = {email = 'user@example.com'}}\ntest_assert_eq(wf.vars.email:match('@(.+)$'), 'example.com', 'domain')"
+  },
+  {
+    "task_type": "mws_check_all_true",
+    "description": "Check if all elements in boolean array are true",
+    "best_practice_code": "for _, v in ipairs(wf.vars.flags) do\n    if not v then return false end\nend\nreturn true",
+    "prewritten_tests": "wf = {vars = {flags = {true, true, true}}}\nlocal all = true\nfor _,v in ipairs(wf.vars.flags) do if not v then all = false break end end\ntest_assert_eq(all, true, 'all true')\nwf.vars.flags = {true, false, true}\nall = true\nfor _,v in ipairs(wf.vars.flags) do if not v then all = false break end end\ntest_assert_eq(all, false, 'not all')"
+  },
+  {
+    "task_type": "mws_format_time",
+    "description": "Convert seconds to MM:SS format string",
+    "best_practice_code": "local m = math.floor(wf.vars.seconds / 60)\nlocal s = wf.vars.seconds % 60\nreturn string.format('%02d:%02d', m, s)",
+    "prewritten_tests": "wf = {vars = {seconds = 125}}\ntest_assert_eq(string.format('%02d:%02d', math.floor(125/60), 125%60), '02:05', 'format')"
+  },
+  {
+    "task_type": "mws_is_empty",
+    "description": "Check if array is empty",
+    "best_practice_code": "return #wf.vars.data == 0",
+    "prewritten_tests": "wf = {vars = {data = {}}}\ntest_assert_eq(#wf.vars.data == 0, true, 'empty')\nwf.vars.data = {1}\ntest_assert_eq(#wf.vars.data == 0, false, 'not empty')"
+  },
+  {
+    "task_type": "mws_last_n",
+    "description": "Get last N elements from array",
+    "best_practice_code": "local result = _utils.array.new()\nlocal arr = wf.vars.history\nlocal start = math.max(1, #arr - 2)\nfor i = start, #arr do\n    table.insert(result, arr[i])\nend\nreturn result",
+    "prewritten_tests": "_utils = {array = {new = function() return {} end}}\nwf = {vars = {history = {'a','b','c','d','e'}}}\nlocal r = {}\nlocal a = wf.vars.history\nfor i = math.max(1,#a-2), #a do table.insert(r, a[i]) end\ntest_assert_eq(#r, 3, 'last 3')\ntest_assert_eq(r[1], 'c', 'first of last 3')"
+  },
+  {
+    "task_type": "mws_join_nonempty",
+    "description": "Join non-empty strings from array with separator",
+    "best_practice_code": "local parts = {}\nfor _, s in ipairs(wf.vars.parts) do\n    if s ~= nil and s ~= '' then\n        table.insert(parts, s)\n    end\nend\nreturn table.concat(parts, '/')",
+    "prewritten_tests": "wf = {vars = {parts = {'a', '', 'b', nil, 'c'}}}\nlocal r = {}\nfor _,s in ipairs(wf.vars.parts) do if s ~= nil and s ~= '' then table.insert(r, s) end end\ntest_assert_eq(table.concat(r, '/'), 'a/b/c', 'joined')"
+  },
+  {
+    "task_type": "mws_template_replace",
+    "description": "Replace template placeholders {name} with values",
+    "best_practice_code": "return wf.vars.template:gsub('{name}', wf.vars.userName)",
+    "prewritten_tests": "wf = {vars = {template = 'Hello {name}!', userName = 'World'}}\ntest_assert_eq(wf.vars.template:gsub('{name}', wf.vars.userName), 'Hello World!', 'replace')"
+  },
+  {
+    "task_type": "mws_celsius_to_fahrenheit",
+    "description": "Convert Celsius to Fahrenheit",
+    "best_practice_code": "return wf.vars.celsius * 9 / 5 + 32",
+    "prewritten_tests": "wf = {vars = {celsius = 100}}\ntest_assert_eq(wf.vars.celsius * 9 / 5 + 32, 212, 'boiling')\nwf.vars.celsius = 0\ntest_assert_eq(wf.vars.celsius * 9 / 5 + 32, 32, 'freezing')"
+  },
+  {
+    "task_type": "mws_count_char",
+    "description": "Count occurrences of a character in string",
+    "best_practice_code": "local count = 0\nfor _ in wf.vars.csv:gmatch(',') do\n    count = count + 1\nend\nreturn count",
+    "prewritten_tests": "wf = {vars = {csv = 'a,b,c,d'}}\nlocal c = 0\nfor _ in wf.vars.csv:gmatch(',') do c = c + 1 end\ntest_assert_eq(c, 3, 'commas')"
+  },
+  {
+    "task_type": "mws_find_index",
+    "description": "Find index of element in array by value",
+    "best_practice_code": "for i, v in ipairs(wf.vars.arr) do\n    if v == wf.vars.target then\n        return i\n    end\nend\nreturn nil",
+    "prewritten_tests": "wf = {vars = {arr = {'x','y','z'}, target = 'y'}}\nlocal idx = nil\nfor i,v in ipairs(wf.vars.arr) do if v == wf.vars.target then idx = i break end end\ntest_assert_eq(idx, 2, 'found')"
+  },
+  {
+    "task_type": "mws_validate_code",
+    "description": "Check if string is N digits",
+    "best_practice_code": "if type(wf.vars.code) == 'string' and #wf.vars.code == 6 and wf.vars.code:match('^%d+$') then\n    return true\nelse\n    return false\nend",
+    "prewritten_tests": "wf = {vars = {code = '123456'}}\ntest_assert_eq(type(wf.vars.code)=='string' and #wf.vars.code==6 and wf.vars.code:match('^%d+$') ~= nil, true, 'valid')\nwf.vars.code = 'abc'\ntest_assert_eq(type(wf.vars.code)=='string' and #wf.vars.code==6 and wf.vars.code:match('^%d+$') ~= nil, false, 'invalid')"
   }
 ]

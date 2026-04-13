@@ -57,6 +57,11 @@ class LuaSandbox:
         if python_methods:
             issues.append(f"ANTI-PATTERN: Python-style method definition with explicit 'self' arg in: {', '.join(python_methods)}. Use colon syntax instead: 'function MyClass:methodName()'")
 
+        # Detect Python return type annotations: function X() -> type
+        type_annotations = re.findall(r'function\s+\w+\([^)]*\)\s*->\s*\w+', code)
+        if type_annotations:
+            issues.append(f"ANTI-PATTERN: Python-style return type annotation '{type_annotations[0]}'. Lua has NO type annotations. Remove '-> type'. For simple tasks, don't wrap in function at all — just write: return wf.vars.x")
+
         # Detect global module table — only top-level lines starting at column 0
         lines = code.strip().split("\n")
         for line in lines[:5]:
